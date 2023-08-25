@@ -16,4 +16,4 @@ jobs:
     - name: silicon-binaries
       run: git clone https://github.com/ColleagueRiley/Silicon -b binaries && cp Silicon/ARM/*.o example/ext/Silicon/
     - name: make
-      run: cd examples && make
+      run: cd example && make
