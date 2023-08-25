@@ -16,8 +16,8 @@
 #endif
 
 #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) && defined(_WIN32)
-#define GLAD_MALLOC RL_MALLOC
-#define GLAD_FREE RL_FREE
+#define GLAD_MALLOC malloc
+#define GLAD_FREE free
 
 #define GLAD_GL_IMPLEMENTATION
 #include "glad.h"
