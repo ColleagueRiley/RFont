@@ -26,7 +26,7 @@ all:
 	make gl3
 	make rlgl
 
-deps/Silicon/mac.o:
+ext/Silicon/mac.o:
 	cd ext/Silicon/ && gcc -c source/*.m
 
 gl:

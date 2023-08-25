@@ -6,9 +6,21 @@
 #define GL_GLEXT_PROTOTYPES
 #endif
 
+#ifdef RFONT_RENDER_LEGACY
+#define GRAPHICS_API_OPENGL_11
+#endif
+
 #ifdef RFONT_RENDER_RLGL
 #include "rlgl.h"
 #define glColor4ub rlColor4ub
+#endif
+
+#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) && defined(_WIN32)
+#define GLAD_MALLOC RL_MALLOC
+#define GLAD_FREE RL_FREE
+
+#define GLAD_GL_IMPLEMENTATION
+#include "glad.h"
 #endif
 
 #include "RGFW.h"
@@ -27,6 +39,10 @@ int main(int argc, char **argv) {
     rlglInit(win->w, win->h);  
 
     rlDrawRenderBatchActive();      // Update and draw internal render batch
+    #endif
+
+    #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) && defined(_WIN32)
+    gladLoadGL((GLADloadfunc)RGFW_getProcAddress);
     #endif
 
     RFont_init(500, 500);
