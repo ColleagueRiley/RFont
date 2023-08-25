@@ -19,7 +19,7 @@ endif
 
 all:
 	@if [ $(shell uname) = Darwin ]; then\
-		make deps/Silicon/source/mac.o;\
+		make ext/Silicon/mac.o;\
 	fi
 
 	make gl
