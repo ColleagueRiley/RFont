@@ -1,0 +1,19 @@
+name: macos
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: silicon-binaries
+      run: git clone https://github.com/ColleagueRiley/Silicon -b binaries && cp Silicon/ARM/*.o example/ext/Silicon/
+    - name: make
+      run: cd examples && make
