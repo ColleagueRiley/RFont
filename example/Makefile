@@ -27,7 +27,7 @@ all:
 	make rlgl
 
 ext/Silicon/mac.o:
-	cd ext/Silicon/ && gcc -c source/*.m
+	cd ext/Silicon/ && gcc -c *.m
 
 gl:
 	gcc main.c $(LIBS) -I./ext -I../ $(LIBS) -D RFONT_RENDER_LEGACY -o gl
