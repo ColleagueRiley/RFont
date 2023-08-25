@@ -11,7 +11,7 @@ ifeq ($(detected_OS),Windows)
 	LIBS := -lopengl32 -lshell32 -lgdi32 -lm
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
-	LIBS := ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo
+	LIBS := -I./ext/Silicon/ ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo
 endif
 ifeq ($(detected_OS),Linux)
     LIBS := -I./include -lX11 -lGLX -lm -lGL
