@@ -71,8 +71,8 @@ TODO :
 	typedef int64_t    i64;
 #endif
 
-#ifndef RFONT_INIT_GLYPHS
-#define RFONT_INIT_GLYPHS 256
+#ifndef RFONT_MAX_GLYPHS
+#define RFONT_MAX_GLYPHS 256
 #endif
 
 #ifndef RFONT_ATLAS_WIDTH
@@ -114,7 +114,7 @@ inline void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, 
 */
 inline void RFont_render_init(void);
 inline u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight);
-inline void RFont_bitmap_to_atlas(u32 atlnitas, u8* bitmap, i32 x, i32 y, i32 w, i32 h, u32 atlasWidth);
+inline void RFont_bitmap_to_atlas(u32 atlnitas, u8* bitmap, i32 x, i32 y, i32 w, i32 h);
 inline void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts);
 inline void RFont_render_free(void);
 #endif
@@ -128,8 +128,8 @@ inline void RFont_render_free(void);
 #define RFONT_GET_TEXPOSX(x) (float)((float)(x) / (float)(RFONT_ATLAS_WIDTH))
 #define RFONT_GET_TEXPOSY(y) (float)((float)(y) / (float)(RFONT_ATLAS_HEIGHT))
 
-#define RFONT_GET_WORLD_X(x, w) (float)((2.0f * (x)) / (w) - 1.0f)
-#define RFONT_GET_WORLD_Y(y, h) (float)(1.0f - (2.0f * (y)) / (h))
+#define RFONT_GET_WORLD_X(x, w) (float)((x) / (((w) / 2.0f)) - 1.0f)
+#define RFONT_GET_WORLD_Y(y, h) (float)(1.0f - ((y) / ((h) / 2.0f)))
 
 typedef struct {
     char ch;
@@ -139,8 +139,7 @@ typedef struct {
 struct RFont_font {
     stbtt_fontinfo font;
 
-    RFont_glyph* glyphs;
-    size_t glyph_count, glyph_cap;
+    RFont_glyph glyphs[RFONT_MAX_GLYPHS];
 
     u32 atlas;
     i32 atlasX, atlasY;
@@ -173,10 +172,6 @@ RFont_font* RFont_font_init_data(char* font_data) {
     
     stbtt_InitFont(&font->font, (unsigned char*)font_data, 0);
 
-    font->glyphs = malloc(sizeof(RFont_glyph) * RFONT_INIT_GLYPHS);
-    font->glyph_count = 0;
-    font->glyph_cap = RFONT_INIT_GLYPHS;
-
     #ifndef RFONT_NO_GRAPHICS
     font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
     #endif
@@ -187,8 +182,6 @@ RFont_font* RFont_font_init_data(char* font_data) {
 }
 
 void RFont_font_free(RFont_font* font) {
-    free(font->glyphs);
-    
     #ifndef RFONT_NO_GRAPHICS
     glDeleteTextures(1, &font->atlas);
     RFont_render_free();
@@ -198,39 +191,31 @@ void RFont_font_free(RFont_font* font) {
 }
 
 size_t RFont_font_add_char(RFont_font* font, char ch) {
-    i32 i, w, h;
-    for (i = 0; i < font->glyph_count; i++)
-        if (font->glyphs[i].ch == ch)
-            return i;        
+    i32 w, h;
+    
+    const i32 i = ch - ' ';
 
+    if (font->glyphs[i].ch == ch)
+        return i;
+
+    printf("h\n");
     float height = stbtt_ScaleForPixelHeight(&font->font,  RFONT_ATLAS_HEIGHT);
     u8* bitmap = stbtt_GetCodepointBitmap(&font->font, 0, height, ch, &w, &h, 0,0);
 
-    if (font->glyph_cap < font->glyph_count + 1) {
-        font->glyph_cap += 5;
-        RFont_glyph* nglyphs = malloc(sizeof(RFont_glyph) * font->glyph_cap);
-        
-        memcpy(nglyphs, font->glyphs, font->glyph_cap * sizeof(RFont_glyph));
-
-        free(font->glyphs);
-        font->glyphs = nglyphs;
-    }  
-
-    font->glyphs[font->glyph_count].ch = ch;
-    font->glyphs[font->glyph_count].x = font->atlasX;
-    font->glyphs[font->glyph_count].x2 = font->atlasX + w;
-    font->glyphs[font->glyph_count].h = h;
+    font->glyphs[i].ch = ch;
+    font->glyphs[i].x = font->atlasX;
+    font->glyphs[i].x2 = font->atlasX + w;
+    font->glyphs[i].h = h;
 
     #ifndef RFONT_NO_GRAPHICS
-    RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h, RFONT_ATLAS_WIDTH);
+    RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
     #endif
 
-    font->atlasX += w + 30;
+    font->atlasX += w;
 
-    font->glyph_count++;
     free(bitmap);
 
-    return font->glyph_count - 1;
+    return i;
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size) {
@@ -356,7 +341,7 @@ void RFont_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPixels,
 	glPixelStorei(GL_UNPACK_SKIP_ROWS, skipRows);
 }
 
-void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, i32 x, i32 y, i32 w, i32 h, u32 atlasWidth) {
+void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, i32 x, i32 y, i32 w, i32 h) {
     glEnable(GL_TEXTURE_2D);
 
 	GLint alignment, rowLength, skipPixels, skipRows;
@@ -367,7 +352,7 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, i32 x, i32 y, i32 w, i32 h, u3
     
 	glBindTexture(GL_TEXTURE_2D, atlas);
 
-	RFont_push_pixel_values(1, w, x, y);
+	RFont_push_pixel_values(1, w, 0, 0);
 
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
@@ -415,7 +400,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 
 	glBegin(GL_TRIANGLES);
     
-	i32 i, j = 0;
+	i32 i;
 	for (i = 0; i < (nverts * 2); i += 2) {
 		glTexCoord2f(tcoords[i], tcoords[i + 1]);
 		
@@ -476,7 +461,7 @@ void RFont_render_init() {
     glGenBuffers(1, &RFont_gl.vertexBuffer);
 	glGenBuffers(1, &RFont_gl.tcoordBuffer);
     
-    /* compile vertex shader */
+    /* compile vertex shad er */
     RFont_gl.vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(RFont_gl.vertexShader, 1, &RFONT_defaultVShaderCode, NULL);
     glCompileShader(RFont_gl.vertexShader);
