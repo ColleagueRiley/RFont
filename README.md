@@ -1,5 +1,5 @@
 # RFont
-Simple single header modular font rendering librayr
+Simple single header modular font rendering lubrary
 
 NOTE: 
 this project is very WIP and is not useable yet\

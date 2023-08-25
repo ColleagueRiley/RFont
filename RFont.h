@@ -308,7 +308,16 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 }
 
 #if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
+
+#ifndef __APPLE__
 #include <GL/gl.h>
+#else
+#include <OpenGL/gl.h>
+#endif
+
+#ifndef GL_TEXTURE_SWIZZLE_RGBA
+#define GL_TEXTURE_SWIZZLE_RGBA           0x8E46
+#endif
 
 u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
     u32 id = 0;

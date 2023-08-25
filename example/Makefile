@@ -14,7 +14,7 @@ ifeq ($(detected_OS),Darwin)        # Mac OS X
 	LIBS := ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo
 endif
 ifeq ($(detected_OS),Linux)
-    LIBS := -I./include -lX11 -lGLX -lm
+    LIBS := -I./include -lX11 -lGLX -lm -lGL
 endif
 
 all:
