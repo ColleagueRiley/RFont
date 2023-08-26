@@ -76,7 +76,7 @@ TODO :
 #endif
 
 #ifndef RFONT_ATLAS_WIDTH
-#define RFONT_ATLAS_WIDTH 12000
+#define RFONT_ATLAS_WIDTH 15000
 #endif
 
 #ifndef RFONT_ATLAS_HEIGHT
@@ -92,13 +92,16 @@ TODO :
 
 typedef struct RFont_font RFont_font;
 
+/* sets the framebuffer size AND runs the graphics init function */
 inline void RFont_init(size_t width, size_t height);
+/* just updates the framebuffer size */
+inline void RFont_update_framebuffer(size_t width, size_t height);
 
 #ifndef RFONT_NO_STDIO
 inline RFont_font* RFont_font_init(char* font_name);
 #endif
 
-inline RFont_font* RFont_font_init_data(char* font_data);
+inline RFont_font* RFont_font_init_data(u8* font_data);
 
 inline void RFont_font_free(RFont_font* font);
 
@@ -109,7 +112,8 @@ inline void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, 
 
 #ifndef RFONT_NO_GRAPHICS
 /* 
-    if you do not want to use opengl, you'll have to define these yourself 
+    if you do not want to use opengl (or want to create your own implemntation of these functions), 
+    you'll have to define these yourself 
     and add `#define RFONT_NO_OPENGL`
 */
 inline void RFont_render_init(void);
@@ -132,32 +136,38 @@ inline void RFont_render_free(void);
 #define RFONT_GET_WORLD_Y(y, h) (float)(1.0f - ((y) / ((h) / 2.0f)))
 
 typedef struct {
-    char ch;
-    u32 x, x2, h;
+    char ch; /* the character (for checking) */
+    u32 x, x2, h; /* coords of the character on the texture */
 } RFont_glyph;
 
 struct RFont_font {
-    stbtt_fontinfo font;
+    stbtt_fontinfo font; /* source stb font */
 
-    RFont_glyph glyphs[RFONT_MAX_GLYPHS];
+    RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
 
-    u32 atlas;
-    i32 atlasX, atlasY;
+    u32 atlas; /* atlas texture */
+    i32 atlasX; /* the current x position inside the atlas */
 };
 
 size_t RFont_width = 0, RFont_height = 0;
 
-void RFont_init(size_t width, size_t height) {
+void RFont_update_framebuffer(size_t width, size_t height) {
+    /* set size of the framebuffer (for rendering later on) */
     RFont_width = width;
     RFont_height = height;
+}
+
+void RFont_init(size_t width, size_t height) {
+    RFont_update_framebuffer(width, height);
 
     #ifndef RFONT_NO_GRAPHICS
+    /* init any rendering stuff that needs to be initalized (eg. vbo objects) */
     RFont_render_init();
     #endif
 }
 
 #ifndef RFONT_NO_STDIO
-char RFont_ttf_buffer[1<<25];
+char RFont_ttf_buffer[1 << 25];
 
 RFont_font* RFont_font_init(char* font_name) {
     FILE* ttf_file = fopen(font_name, "rb");
@@ -167,16 +177,15 @@ RFont_font* RFont_font_init(char* font_name) {
 }
 #endif
 
-RFont_font* RFont_font_init_data(char* font_data) {
+RFont_font* RFont_font_init_data(u8* font_data) {
     RFont_font* font = malloc(sizeof(RFont_font));
     
-    stbtt_InitFont(&font->font, (unsigned char*)font_data, 0);
+    stbtt_InitFont(&font->font, font_data, 0);
 
     #ifndef RFONT_NO_GRAPHICS
     font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
     #endif
     font->atlasX = 0;
-    font->atlasY = 0;
     
     return font;
 }
@@ -198,7 +207,6 @@ size_t RFont_font_add_char(RFont_font* font, char ch) {
     if (font->glyphs[i].ch == ch)
         return i;
 
-    printf("h\n");
     float height = stbtt_ScaleForPixelHeight(&font->font,  RFONT_ATLAS_HEIGHT);
     u8* bitmap = stbtt_GetCodepointBitmap(&font->font, 0, height, ch, &w, &h, 0,0);
 
@@ -219,76 +227,93 @@ size_t RFont_font_add_char(RFont_font* font, char ch) {
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size) {
-    RFont_draw_text_len(font, text, strlen(text), x, y, size);
+    RFont_draw_text_len(font, text, 0, x, y, size);
 }
 
 void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size) {
     static float verts[1024 * 2];
     static float tcoords[1024 * 2];
 
-    i32 i, j, glyph;
-    for (i = 0, j = 0; i < len; i++) {
-        /* get width */
-		int x0, y0, x1, y1;
+    i32 startX = x,
+        i = 0;
+    
+    char* str;
 
-		stbtt_GetGlyphBox(&font->font, stbtt_FindGlyphIndex(&font->font, text[i]), &x0, &y0, &x1, &y1);
+    for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {
+        if (*str == '\n') {
+            x = startX;
+            y += size;
+            continue;
+        }
 
-		int ix0, ix1;
+        int x0, y0, x1, y1;
+
+        int g = stbtt_FindGlyphIndex(&font->font, *str);
+		stbtt_GetGlyphBox(&font->font, g, &x0, &y0, &x1, &y1);
+
         float scale = stbtt_ScaleForPixelHeight(&font->font, (float)size);
 
-		ix0 = STBTT_ifloor(x0 * scale);
-		ix1 = STBTT_iceil (x1 * scale);
- 
+		int ix0 = STBTT_ifloor(x0 * scale);
+		int ix1 = STBTT_iceil (x1 * scale);
+
+        int iy0 = STBTT_ifloor(-y1 * scale + 0);
+        int iy1 = STBTT_iceil (-y0 * scale + 0);
+
 		int w = (ix1 - ix0);
+        int h = (iy1 - iy0);
 
-        glyph = RFont_font_add_char(font, text[i]);
+	    int realY = y + iy0;
 
-        verts[j] = RFONT_GET_WORLD_X(x, RFont_width); 
-        verts[j + 1] = RFONT_GET_WORLD_Y(y, RFont_height);
+        x += ix0;
+
+        i32 glyph = RFont_font_add_char(font, *str);
+
+        verts[i] = RFONT_GET_WORLD_X(x, RFont_width); 
+        verts[i + 1] = RFONT_GET_WORLD_Y(realY, RFont_height);
         /*  */
-        verts[j + 2] = RFONT_GET_WORLD_X(x, RFont_width);
-        verts[j + 3] = RFONT_GET_WORLD_Y(y + size, RFont_height);
+        verts[i + 2] = RFONT_GET_WORLD_X(x, RFont_width);
+        verts[i + 3] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
         /*  */
-        verts[j + 4] = RFONT_GET_WORLD_X(x + w, RFont_width);
-        verts[j + 5] = RFONT_GET_WORLD_Y(y + size, RFont_height);
+        verts[i + 4] = RFONT_GET_WORLD_X(x + w, RFont_width);
+        verts[i + 5] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
         /*  */
         /*  */
-        verts[j + 6] = RFONT_GET_WORLD_X(x + w, RFont_width);
-        verts[j + 7] = RFONT_GET_WORLD_Y(y, RFont_height);
+        verts[i + 6] = RFONT_GET_WORLD_X(x + w, RFont_width);
+        verts[i + 7] = RFONT_GET_WORLD_Y(realY, RFont_height);
         /*  */
-        verts[j + 8] = RFONT_GET_WORLD_X(x, RFont_width); 
-        verts[j + 9] = RFONT_GET_WORLD_Y(y, RFont_height);
+        verts[i + 8] = RFONT_GET_WORLD_X(x, RFont_width); 
+        verts[i + 9] = RFONT_GET_WORLD_Y(realY, RFont_height);
         /*  */
-        verts[j + 10] = RFONT_GET_WORLD_X(x + w, RFont_width);
-        verts[j + 11] = RFONT_GET_WORLD_Y(y + size, RFont_height);
+        verts[i + 10] = RFONT_GET_WORLD_X(x + w, RFont_width);
+        verts[i + 11] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
 
         /* texture coords */
 
-        tcoords[j] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x);
-        tcoords[j + 1] = 0;
+        tcoords[i] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x);
+        tcoords[i + 1] = 0;
         /*  */
-        tcoords[j + 2] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x); 
-        tcoords[j + 3] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
+        tcoords[i + 2] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x); 
+        tcoords[i + 3] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
         /*  */
-        tcoords[j + 4] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
-        tcoords[j + 5] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
+        tcoords[i + 4] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
+        tcoords[i + 5] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
         /*  */
         /*  */
-        tcoords[j + 6] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
-        tcoords[j + 7] = 0;
+        tcoords[i + 6] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
+        tcoords[i + 7] = 0;
         /*  */
-        tcoords[j + 8] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x);
-        tcoords[j + 9] = 0;
+        tcoords[i + 8] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x);
+        tcoords[i + 9] = 0;
         /*  */
-        tcoords[j + 10] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
-        tcoords[j + 11] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
+        tcoords[i + 10] = RFONT_GET_TEXPOSX(font->glyphs[glyph].x2);
+        tcoords[i + 11] = RFONT_GET_TEXPOSY(font->glyphs[glyph].h);
 
-        j += 12;
+        i += 12;
         x += w + 1;
     }
-
+    
     #ifndef RFONT_NO_GRAPHICS
-    RFont_render_text(font->atlas, verts, tcoords, 6 * len);
+    RFont_render_text(font->atlas, verts, tcoords, i / 2);
     #endif
 }
 
