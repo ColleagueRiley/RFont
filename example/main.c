@@ -32,7 +32,7 @@
 int main(int argc, char **argv) {
     RGFW_setGLVersion(3, 3);
     
-    RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 500, 500, 0);
+    RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 1000, 500, 0);
 
     #if defined(RFONT_RENDER_RLGL) && !defined(RFONT_RENDER_LEGACY)
     rlLoadExtensions((void*)RGFW_getProcAddress);        
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     gladLoadGL((GLADloadfunc)RGFW_getProcAddress);
     #endif
 
-    RFont_init(500, 500);
+    RFont_init(win->w, win->h);
 
     RFont_font* font = RFont_font_init("/usr/share/fonts/TTF/DejaVuSans.ttf");
 
@@ -63,7 +63,11 @@ int main(int argc, char **argv) {
         glClear(GL_COLOR_BUFFER_BIT);
         
         glColor4ub(255, 0, 0, 255);
-        RFont_draw_text(font, "c", 200, 100, 50);
+        RFont_draw_text(font, "abcdefghijklmnopqrstuvwxyz\n1234567890@.<>,/?\\|[{]}", 0, 100, 60);
+        RFont_draw_text(font, "`~!#$%^&*()_-=+", 0, 220, 60);
+        RFont_draw_text(font, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 320, 60);
+
+        RFont_draw_text(font, "test_func();", 0, 400, 60);
 
         #if defined(RFONT_RENDER_RLGL)
         rlDrawRenderBatchActive();      // Update and draw internal render batch
@@ -71,6 +75,11 @@ int main(int argc, char **argv) {
 
 
         RGFW_window_swapBuffers(win);
+        
+        #if defined(RFONT_RENDER_RLGL) && !defined(RFONT_RENDER_LEGACY)
+        rlSetFramebufferSize(win->w, win->h);  
+        RFont_update_framebuffer(win->w, win->h);
+        #endif
     }
 
 
