@@ -144,7 +144,8 @@ inline void RFont_render_free(void);
 #define RFONT_GET_WORLD_Y(y, h) (float)(1.0f - ((y) / ((h) / 2.0f)))
 
 struct RFont_font {
-    stbtt_fontinfo src; /* source stb font */
+    stbtt_fontinfo info; /* source stb font */
+    int fheight; /* font height from stb */
 
     RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
 
@@ -183,7 +184,9 @@ RFont_font* RFont_font_init(char* font_name) {
 RFont_font* RFont_font_init_data(u8* font_data) {
     RFont_font* font = malloc(sizeof(RFont_font));
     
-    stbtt_InitFont(&font->src, font_data, 0);
+    stbtt_InitFont(&font->info, font_data, 0);
+
+    font->fheight = ttSHORT(font->info.data + font->info.hhea + 4) - ttSHORT(font->info.data + font->info.hhea + 6);
 
     #ifndef RFONT_NO_GRAPHICS
     font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
@@ -210,16 +213,16 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch) {
     if (font->glyphs[i].ch == ch)
         return font->glyphs[i];
 
-    float height = stbtt_ScaleForPixelHeight(&font->src,  RFONT_ATLAS_HEIGHT);
-    u8* bitmap = stbtt_GetCodepointBitmap(&font->src, 0, height, ch, &w, &h, 0,0);
+    float height = stbtt_ScaleForPixelHeight(&font->info,  RFONT_ATLAS_HEIGHT);
+    u8* bitmap = stbtt_GetCodepointBitmap(&font->info, 0, height, ch, &w, &h, 0,0);
 
     font->glyphs[i].ch = ch;
     font->glyphs[i].x = font->atlasX;
     font->glyphs[i].x2 = font->atlasX + w;
     font->glyphs[i].h = h;
-    font->glyphs->src = stbtt_FindGlyphIndex(&font->src, ch);
+    font->glyphs->src = stbtt_FindGlyphIndex(&font->info, ch);
 
-    stbtt_GetGlyphBox(&font->src, font->glyphs->src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
+    stbtt_GetGlyphBox(&font->info, font->glyphs->src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
 
     #ifndef RFONT_NO_GRAPHICS
     RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
@@ -252,7 +255,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
             continue;
         }
         
-        float scale = stbtt_ScaleForPixelHeight(&font->src, (float)size);
+        float scale = (float)size / font->fheight;
 
         RFont_glyph glyph = RFont_font_add_char(font, *str);
 
