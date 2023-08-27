@@ -46,7 +46,6 @@ int main(int argc, char **argv) {
     #endif
 
     RFont_init(win->w, win->h);
-
     RFont_font* font = RFont_font_init("/usr/share/fonts/TTF/DejaVuSans.ttf");
 
     bool running = true;
@@ -67,7 +66,7 @@ int main(int argc, char **argv) {
         RFont_draw_text(font, "`~!#$%^&*()_-=+", 0, 220, 60);
         RFont_draw_text(font, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 320, 60);
 
-        RFont_draw_text(font, "test_func();", 0, 400, 60);
+        RFont_draw_text(font, "RFont_draw_text();", 0, 400, 60);
 
         #if defined(RFONT_RENDER_RLGL)
         rlDrawRenderBatchActive();      // Update and draw internal render batch
