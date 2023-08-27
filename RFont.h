@@ -37,19 +37,6 @@ is in at least one of your files or arguments
 -- NOTE: By default, opengl 3.3 vbos are used for rendering --
 */
 
-
-/*
-TODO :
-- make sure text is being loaded into the atlas correctly
-- make sure texture coords are correct
-
-- set up simple shader 
-
-- support non rlgl rendering
-
-- get text width
-*/
-
 #ifndef RFONT_NO_STDIO
 #include <stdio.h>
 #endif
@@ -214,18 +201,25 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
     if (font->glyphs[i].ch == ch && font->glyphs[i].size == size)
         return font->glyphs[i];
 
-    float height = stbtt_ScaleForPixelHeight(&font->info, size);
-    u8* bitmap = stbtt_GetCodepointBitmap(&font->info, 0, height, ch, &w, &h, 0,0);
+    float scale = (float)size / font->fheight;
+    
+    int g = stbtt_FindGlyphIndex(&font->info, ch);
+    u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, g, &w, &h, 0, 0);
 
+
+/*    u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, g, &w, &h, 0, 0, 
+                                                    &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1
+                                              );
+*/
     font->glyphs[i].ch = ch;
     font->glyphs[i].x = font->atlasX;
     font->glyphs[i].x2 = font->atlasX + w;
     font->glyphs[i].h = h;
-    font->glyphs->src = stbtt_FindGlyphIndex(&font->info, ch);
+    font->glyphs->src = g;
     font->glyphs[i].size = size;
 
     stbtt_GetGlyphBox(&font->info, font->glyphs->src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
-
+//stbtt_GetCodepointBitmapSubpixel(info, scale_x, scale_y, 0.0f,0.0f, codepoint, width,height,xoff,yoff);
 
     #ifndef RFONT_NO_GRAPHICS
     RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
@@ -250,6 +244,8 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
         i = 0;
     
     char* str;
+
+    int prevGlyph = 0;
 
     for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
         if (*str == '\n') { 
@@ -297,6 +293,14 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 
         x += ix0;
 
+        if (prevGlyph) {
+            float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src) * scale;
+
+            x += (adv + 0.5f);
+        }
+
+        prevGlyph = glyph.src;
+
         verts[i] = RFONT_GET_WORLD_X(x, RFont_width); 
         verts[i + 1] = RFONT_GET_WORLD_Y(realY, RFont_height);
         /*  */
@@ -338,7 +342,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
         tcoords[i + 11] = RFONT_GET_TEXPOSY(glyph.h);
 
         i += 12;
-        x += w + 1;
+        x += w;
     }
     
     #ifndef RFONT_NO_GRAPHICS
@@ -365,6 +369,33 @@ GLAPI void APIENTRY glDebugMessageCallback (GLDEBUGPROC callback, const void *us
 void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     printf("OpenGL Debug Message: %s\n", message);
 }
+
+void RFont_opengl_getError() {
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        switch (err) {
+            case GL_INVALID_ENUM:
+                printf("OpenGL error: GL_INVALID_ENUM\n");
+                break;
+            case GL_INVALID_VALUE:
+                printf("OpenGL error: GL_INVALID_VALUE\n");
+                break;
+            case GL_INVALID_OPERATION:
+                printf("OpenGL error: GL_INVALID_OPERATION\n");
+                break;
+            case GL_STACK_OVERFLOW:
+                printf("OpenGL error: GL_STACK_OVERFLOW\n");
+                break;
+            case GL_STACK_UNDERFLOW:
+                printf("OpenGL error: GL_STACK_UNDERFLOW\n");
+                break;	
+            default:
+                printf("OpenGL error: Unknown error code 0x%x\n", err);
+                break;
+        }
+    }
+}
+
 #endif
 
 u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
@@ -438,6 +469,12 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     
+    rlMatrixMode(RL_MODELVIEW);
+    rlLoadIdentity();
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);
+
 	rlSetTexture(atlas);
 
 	glEnable(GL_BLEND);
@@ -459,6 +496,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	rlPopMatrix();
 
 	rlSetTexture(0);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free(void) {}
@@ -471,7 +509,13 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glShadeModel(GL_SMOOTH);
-    
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);    
+
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, atlas);
@@ -479,7 +523,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	glPushMatrix();
 
 	glBegin(GL_TRIANGLES);
-    
+
 	i32 i;
 	for (i = 0; i < (nverts * 2); i += 2) {
 		glTexCoord2f(tcoords[i], tcoords[i + 1]);
@@ -490,6 +534,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	glPopMatrix();
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free() {}
@@ -509,8 +554,8 @@ typedef struct {
 RFont_gl_info RFont_gl;
 
 #ifdef RFONT_DEBUG
-inline void RFont_debug_linkage(u32 src, const char* shader, const char* action);
-void RFont_debug_linkage(u32 src, const char* shader, const char* action) {
+inline void RFont_debug_shader(u32 src, const char* shader, const char* action);
+void RFont_debug_shader(u32 src, const char* shader, const char* action) {
     GLint status;
     if (action[0] == 'l')
         glGetProgramiv(src, GL_LINK_STATUS, &status);
@@ -522,16 +567,19 @@ void RFont_debug_linkage(u32 src, const char* shader, const char* action) {
     else {
         printf("%s Shader failed to %s.\n", shader, action);
 
-        GLint infoLogLength;
-        glGetShaderiv(src, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if (action[0] == 'c') {
+            GLint infoLogLength;
+            glGetShaderiv(src, GL_INFO_LOG_LENGTH, &infoLogLength);
 
-        if (infoLogLength > 0) {
-            GLchar* infoLog = (GLchar*)malloc(infoLogLength);
-            glGetShaderInfoLog(src, infoLogLength, NULL, infoLog);
-            printf("%s Shader info log:\n%s\n", shader, infoLog);
-            free(infoLog);
+            if (infoLogLength > 0) {
+                GLchar* infoLog = (GLchar*)malloc(infoLogLength);
+                glGetShaderInfoLog(src, infoLogLength, NULL, infoLog);
+                printf("%s Shader info log:\n%s\n", shader, infoLog);
+                free(infoLog);
+            }
         }
         
+        RFont_opengl_getError();
         exit(1);
     }
 }
@@ -576,7 +624,7 @@ void RFont_render_init() {
     glCompileShader(RFont_gl.vShader);
     
     #ifdef RFONT_DEBUG
-    RFont_debug_linkage(RFont_gl.vShader, "Vertex", "compile");
+    RFont_debug_shader(RFont_gl.vShader, "Vertex", "compile");
     #endif
 
     /* compile fragment shader */
@@ -586,7 +634,7 @@ void RFont_render_init() {
 
     
     #ifdef RFONT_DEBUG
-    RFont_debug_linkage(RFont_gl.fShader, "Fragment", "compile");
+    RFont_debug_shader(RFont_gl.fShader, "Fragment", "compile");
     #endif
     
     /* create program and link vertex and fragment shaders */
@@ -594,13 +642,13 @@ void RFont_render_init() {
     glAttachShader(RFont_gl.program, RFont_gl.vShader);
     
     #ifdef RFONT_DEBUG
-    RFont_debug_linkage(RFont_gl.program, "Vertex", "link to the program");
+    RFont_debug_shader(RFont_gl.program, "Vertex", "link to the program");
     #endif
 
     glAttachShader(RFont_gl.program, RFont_gl.fShader);
     
     #ifdef RFONT_DEBUG
-    RFont_debug_linkage(RFont_gl.program, "Fragment", "link to the program");
+    RFont_debug_shader(RFont_gl.program, "Fragment", "link to the program");
     #endif
 
     glLinkProgram(RFont_gl.program);
@@ -611,6 +659,12 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_BLEND);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, atlas);
@@ -635,6 +689,8 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	glDisableVertexAttribArray(1);
 
 	glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free() {
