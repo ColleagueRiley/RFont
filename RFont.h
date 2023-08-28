@@ -38,6 +38,14 @@ is in at least one of your files or arguments
 -- NOTE: By default, opengl 3.3 vbos are used for rendering --
 */
 
+/*
+credits :
+
+stb_truetype.h - a dependency for RFont, most of (a slightly motified version of) stb_truetype.h is included directly into RFont.h
+http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ - UTF-8 decoding function
+fontstash - fontstash was used as a refference for some parts
+*/
+
 #ifndef RFONT_NO_STDIO
 #include <stdio.h>
 #endif
@@ -45,11 +53,12 @@ is in at least one of your files or arguments
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <stdbool.h>
 
 #if !defined(u8)
     #include <stdint.h>
 
-    typedef uint8_t     u8;
+   typedef uint8_t     u8;
 	typedef int8_t      i8;
 	typedef uint16_t   u16;
 	typedef int16_t    i16;
@@ -58,6 +67,11 @@ is in at least one of your files or arguments
 	typedef uint64_t   u64;
 	typedef int64_t    i64;
 #endif
+
+/* 
+You can define these yourself if 
+you want to change anything
+*/
 
 #ifndef RFONT_MAX_GLYPHS
 #define RFONT_MAX_GLYPHS 256
@@ -75,36 +89,86 @@ is in at least one of your files or arguments
 #define RFONT_INIT_TEXT_SIZE 500
 #endif
 
-#ifndef RFONT
-#define RFONT
+/* make sure RFont declares aren't declared twice */
+#ifndef RFONT_H
+#define RFONT_H
 
 typedef struct RFont_font RFont_font;
 
 typedef struct {
-    char ch; /* the character (for checking) */
-    size_t size;
+    u8 codepoint; /* the character (for checking) */
+    size_t size; /* the size of the glyph */
     u32 x, x2, h; /* coords of the character on the texture */
 
     /* source glyph data */
     int src, x0, y0, x1, y1;
 } RFont_glyph;
 
-/* sets the framebuffer size AND runs the graphics init function */
+/**
+ * @brief Sets the framebuffer size AND runs the graphics init function.
+ * @param width The framebuffer width.
+ * @param height The framebuffer height.
+*/
 inline void RFont_init(size_t width, size_t height);
-/* just updates the framebuffer size */
+/**
+ * @brief Just updates the framebuffer size.
+ * @param width The framebuffer width.
+ * @param height The framebuffer height.
+*/
 inline void RFont_update_framebuffer(size_t width, size_t height);
 
 #ifndef RFONT_NO_STDIO
+/**
+ * @brief Init font stucture with a TTF file path.
+ * @param font_name The TTF file path.
+ * @return The `RFont_font` created using the TTF file data.
+*/
 inline RFont_font* RFont_font_init(char* font_name);
 #endif
 
-inline RFont_font* RFont_font_init_data(u8* font_data);
 
+/**
+ * @brief Init font stucture with raw TTF data.
+ * @param font_data The raw TTF data.
+ * @param auto_free If the memory should be automatically freed by `RFont_font_free`.
+ * @return The `RFont_font` created from the data.
+*/
+inline RFont_font* RFont_font_init_data(u8* font_data, bool auto_free);
+
+/**
+ * @brief Free data from the font stucture, including the stucture itself
+ * @param font The font stucture to free
+*/
 inline void RFont_font_free(RFont_font* font);
 
-inline RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size);
+/**
+ * @brief Add a UTF-8 character to the font's atlas.
+ * @param font The font to use.
+ * @param ch The character to add to the atlas.
+ * @param size The size of the character.
+ * @return The `RFont_glyph` created from the data and added to the atlas.
+*/
+inline RFont_glyph RFont_font_add_char(RFont_font* font, u8 ch, size_t size);
 
+/**
+ * @brief Draw a text string using the font.
+ * @param font The font stucture to use for drawing
+ * @param text The string to draw 
+ * @param x The x position of the text
+ * @param y The y position of the text
+ * @param size The size of the text
+*/
 inline void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size);
+
+/**
+ * @brief Draw a text string using the font using a given length.
+ * @param font The font stucture to use for drawing
+ * @param text The string to draw 
+ * @param len The length of the string
+ * @param x The x position of the text
+ * @param y The y position of the text
+ * @param size The size of the text
+*/
 inline void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size);
 
 #ifndef RFONT_NO_GRAPHICS
@@ -113,14 +177,14 @@ inline void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, 
     you'll have to define these yourself 
     and add `#define RFONT_NO_OPENGL`
 */
-inline void RFont_render_init(void);
-inline u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight);
-inline void RFont_bitmap_to_atlas(u32 atlnitas, u8* bitmap, i32 x, i32 y, i32 w, i32 h);
-inline void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts);
-inline void RFont_render_free(void);
+inline void RFont_render_init(void); /* any initalizations the renderer needs to do */
+inline u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
+inline void RFont_bitmap_to_atlas(u32 atlnitas, u8* bitmap, i32 x, i32 y, i32 w, i32 h); /* add the given bitmap to the texture based on the given coords and size data */
+inline void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts); /* render the text, using the vertices, atlas texture, and texture coords given. */
+inline void RFont_render_free(void); /* free any memory the renderer might need to free */
 #endif
 
-#endif /* RFONT */
+#endif /* RFONT_H */
 
 #ifdef RFONT_IMPLEMENTATION
 
@@ -134,6 +198,12 @@ inline void RFont_render_free(void);
 
 #define RFONT_GET_WORLD_X(x, w) (float)((x) / (((w) / 2.0f)) - 1.0f)
 #define RFONT_GET_WORLD_Y(y, h) (float)(1.0f - ((y) / ((h) / 2.0f)))
+
+/* 
+stb defines required by RFont
+
+you probably don't care about this part if you're reading just the RFont code
+*/
 
 #ifndef RFONT_EXTERNAL_STB
 // private structure
@@ -185,22 +255,29 @@ STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1,
 STBTT_DEF int  stbtt_GetGlyphBox(const stbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
 #endif /* RFONT_EXTERNAL_STB */
 
+/* 
+END of stb defines required by RFont
+
+you probably care about this part 
+*/
+
 struct RFont_font {
-    stbtt_fontinfo info; /* source stb font */
-    int fheight; /* font height from stb */
+   stbtt_fontinfo info; /* source stb font */
+   bool free_font_memory;
+   int fheight; /* font height from stb */
 
-    RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
+   RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
 
-    u32 atlas; /* atlas texture */
-    i32 atlasX; /* the current x position inside the atlas */
+   u32 atlas; /* atlas texture */
+   i32 atlasX; /* the current x position inside the atlas */
 };
 
 size_t RFont_width = 0, RFont_height = 0;
 
 void RFont_update_framebuffer(size_t width, size_t height) {
-    /* set size of the framebuffer (for rendering later on) */
-    RFont_width = width;
-    RFont_height = height;
+   /* set size of the framebuffer (for rendering later on) */
+   RFont_width = width;
+   RFont_height = height;
 }
 
 void RFont_init(size_t width, size_t height) {
@@ -213,76 +290,137 @@ void RFont_init(size_t width, size_t height) {
 }
 
 #ifndef RFONT_NO_STDIO
-char RFont_ttf_buffer[1 << 25];
-
 RFont_font* RFont_font_init(char* font_name) {
-    FILE* ttf_file = fopen(font_name, "rb");
-    fread(RFont_ttf_buffer, 1, 1<<25, ttf_file);
+   FILE* ttf_file = fopen(font_name, "rb");
 
-    return RFont_font_init_data((u8*)RFont_ttf_buffer);
+   fseek(ttf_file, 0U, SEEK_END);
+   size_t size = ftell(ttf_file);
+
+   char* ttf_buffer = malloc(sizeof(char) * size); 
+   fseek(ttf_file, 0U, SEEK_SET);
+
+   fread(ttf_buffer, 1, size, ttf_file);
+
+   return RFont_font_init_data((u8*)ttf_buffer, true);
 }
 #endif
 
-RFont_font* RFont_font_init_data(u8* font_data) {
-    RFont_font* font = malloc(sizeof(RFont_font));
-    
-    stbtt_InitFont(&font->info, font_data, 0);
+RFont_font* RFont_font_init_data(u8* font_data, bool auto_free) {
+   RFont_font* font = malloc(sizeof(RFont_font));
+   
+   stbtt_InitFont(&font->info, font_data, 0);
 
-    font->fheight = ttSHORT(font->info.data + font->info.hhea + 4) - ttSHORT(font->info.data + font->info.hhea + 6);
+   font->fheight = ttSHORT(font->info.data + font->info.hhea + 4) - ttSHORT(font->info.data + font->info.hhea + 6);
 
-    #ifndef RFONT_NO_GRAPHICS
-    font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
-    #endif
-    font->atlasX = 0;
-    
-    return font;
+   #ifndef RFONT_NO_GRAPHICS
+   font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
+   #endif
+   font->atlasX = 0;
+
+   font->free_font_memory = auto_free;
+   
+   return font;
 }
 
 void RFont_font_free(RFont_font* font) {
-    #ifndef RFONT_NO_GRAPHICS
-    glDeleteTextures(1, &font->atlas);
-    RFont_render_free();
-    #endif
+   #ifndef RFONT_NO_GRAPHICS
+   glDeleteTextures(1, &font->atlas);
+   RFont_render_free();
+   #endif
 
-    free(font);
+   if (font->free_font_memory)
+      free(font->info.data);
+   
+   free(font);
 }
 
-RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
-    i32 w, h;
-    
-    const i32 i = ch - ' ';
 
-    if (font->glyphs[i].ch == ch && font->glyphs[i].size == size)
-        return font->glyphs[i];
+/*
+decode utf8 character to codepoint 
+*/
 
-    float scale = (float)size / font->fheight;
+// Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 
-    int g = stbtt_FindGlyphIndex(&font->info, ch);
-    stbtt_GetGlyphBox(&font->info, g, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
+/* this specific version was sourced from fontstash */
 
-    #ifndef RFONT_EXTERNAL_STB
-    u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, g, 
-                                                    font->glyphs[i].x0, font->glyphs[i].y0, font->glyphs[i].x1, font->glyphs[i].y1, &w, &h, 0, 0);
-    #else
-    u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, g, &w, &h, 0, 0);
-    #endif
+#define RFONT_UTF8_ACCEPT 0
+#define RFont_UTF8_REJECT 12
 
-    font->glyphs[i].ch = ch;
-    font->glyphs[i].x = font->atlasX;
-    font->glyphs[i].x2 = font->atlasX + w;
-    font->glyphs[i].h = h;
-    font->glyphs->src = g;
-    font->glyphs[i].size = size;
+inline static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte);
 
-    #ifndef RFONT_NO_GRAPHICS
-    RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
-    #endif
+static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
+   static const u8 utf8d[] = {
+      // The first part of the table maps bytes to character classes that
+      // to reduce the size of the transition table and create bitmasks.
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,
+      7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+      8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+      10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8,
 
-    font->atlasX += w;
+      // The second part is a transition table that maps a combination
+      // of a state of the automaton and a character class to a state.
+      0,12,24,36,60,96,84,12,12,12,48,72, 12,12,12,12,12,12,12,12,12,12,12,12,
+      12, 0,12,12,12,12,12, 0,12, 0,12,12, 12,24,12,12,12,12,12,24,12,24,12,12,
+      12,12,12,12,12,12,12,24,12,12,12,12, 12,24,12,12,12,12,12,12,12,24,12,12,
+      12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
+      12,36,12,12,12,12,12,12,12,12,12,12,
+   };
 
-    free(bitmap);
+	u32 type = utf8d[byte];
 
-    return font->glyphs[i];
+	*codep = (*state != RFONT_UTF8_ACCEPT) ?
+		(byte & 0x3fu) | (*codep << 6) :
+		(0xff >> type) & (byte);
+
+	*state = utf8d[256 + *state + type];
+	return *state;
+}
+
+
+RFont_glyph RFont_font_add_char(RFont_font* font, u8 codepoint, size_t size) {
+   i32 w, h;
+   
+   const u8 i = codepoint - ' ';
+
+   if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
+      return font->glyphs[i];
+
+   float scale = (float)size / font->fheight;
+
+   font->glyphs->src = stbtt_FindGlyphIndex(&font->info, codepoint);
+
+   if (font->glyphs->src == 0)
+      return (RFont_glyph){0, 0};
+   
+   stbtt_GetGlyphBox(&font->info, font->glyphs->src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
+
+   #ifndef RFONT_EXTERNAL_STB
+   u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs->src, 
+                                                   font->glyphs[i].x0, font->glyphs[i].y0, font->glyphs[i].x1, font->glyphs[i].y1, &w, &h, 0, 0);
+   #else
+   u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs->src, &w, &h, 0, 0);
+   #endif
+
+   font->glyphs[i].codepoint = codepoint;
+   font->glyphs[i].x = font->atlasX;
+   font->glyphs[i].x2 = font->atlasX + w;
+   font->glyphs[i].h = h;
+   font->glyphs[i].size = size;
+
+   #ifndef RFONT_NO_GRAPHICS
+   RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
+   #endif
+
+   font->atlasX += w;
+
+   free(bitmap);
+
+   return font->glyphs[i];
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size) {
@@ -300,31 +438,39 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 
     int prevGlyph = 0;
 
+    u32 codepoint, utf8state = 0;
+
     for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
-        if (*str == '\n') { 
-            x = startX;
-            y += size;
-            continue;
-        }
+      if (*str == '\n') { 
+         x = startX;
+         y += size;
+         continue;
+      }
 
-        float scale = (float)size / font->fheight;
+      float scale = (float)size / font->fheight;
 
-        /* 
-        I would like to use this method, 
-        it makes it so I only have to load each glyph once 
-        instead of once per size
-        however, it has some issues so I've decided not to use it for now
+      if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
+         continue;
 
-        RFont_glyph glyph = RFont_font_add_char(font, *str, RFONT_ATLAS_HEIGHT);
-        */
+      /* 
+      I would like to use this method, 
+      it makes it so I only have to load each glyph once 
+      instead of once per size
+      however, it has some issues so I've decided not to use it for now
 
-        RFont_glyph glyph = RFont_font_add_char(font, *str, size);
+      RFont_glyph glyph = RFont_font_add_char(font, codepoint, RFONT_ATLAS_HEIGHT);
+      */
+
+      RFont_glyph glyph = RFont_font_add_char(font, codepoint, size);
+
+      if (glyph.codepoint == 0 && glyph.size == 0)
+         continue;
 
 		int ix0 = floor(glyph.x0 * scale);
 		int ix1 = ceil(glyph.x1 * scale);
 
-        int iy0 = floor(-glyph.y1 * scale + 0);
-        int iy1 = ceil(-glyph.y0 * scale + 0);
+      int iy0 = floor(-glyph.y1 * scale + 0);
+      int iy1 = ceil(-glyph.y0 * scale + 0);
 
 		int w = (ix1 - ix0);
         int h = (iy1 - iy0);
@@ -642,111 +788,111 @@ void RFont_debug_shader(u32 src, const char* shader, const char* action) {
 #endif
 
 void RFont_render_init() {
-    static const char* defaultVShaderCode =
-        "#version 330                       \n"
-        "layout(location = 0) in vec2 vertexPosition;            \n"
-        "layout(location = 1) in vec2 vertexTexCoord;            \n"
-        "out vec2 fragTexCoord;             \n"
-        "out vec4 fragColor;                \n"
+   static const char* defaultVShaderCode =
+      "#version 330                       \n"
+      "layout(location = 0) in vec2 vertexPosition;            \n"
+      "layout(location = 1) in vec2 vertexTexCoord;            \n"
+      "out vec2 fragTexCoord;             \n"
+      "out vec4 fragColor;                \n"
 
-        "uniform mat4 mvp;                  \n"
-        "void main() {                      \n"
-        "    fragTexCoord = vertexTexCoord; \n"
-        "    fragColor = vec4(1.0, 1.0, 1.0, 1.0);      \n"
-        "    gl_Position = vec4(vertexPosition, 0.0, 1.0);              \n"
-        "}                                              \n";
+      "uniform mat4 mvp;                  \n"
+      "void main() {                      \n"
+      "    fragTexCoord = vertexTexCoord; \n"
+      "    fragColor = vec4(1.0, 1.0, 1.0, 1.0);      \n"
+      "    gl_Position = vec4(vertexPosition, 0.0, 1.0);              \n"
+      "}                                              \n";
 
-    static const char* defaultFShaderCode =
-        "#version 330                       \n"
-        "in vec2 fragTexCoord;              \n"
-        "in vec4 fragColor;                 \n"
-        "out vec4 finalColor;               \n"
-        "uniform sampler2D texture0;        \n"
-        "void main() {                      \n"
-        "    vec4 texelColor = texture(texture0, fragTexCoord);     \n"
-        "    finalColor = texelColor * fragColor;                   \n"
-        "}                                                          \n";
+   static const char* defaultFShaderCode =
+      "#version 330                       \n"
+      "in vec2 fragTexCoord;              \n"
+      "in vec4 fragColor;                 \n"
+      "out vec4 finalColor;               \n"
+      "uniform sampler2D texture0;        \n"
+      "void main() {                      \n"
+      "    vec4 texelColor = texture(texture0, fragTexCoord);     \n"
+      "    finalColor = texelColor * fragColor;                   \n"
+      "}                                                          \n";
 
-	glGenVertexArrays(1, &RFont_gl.vao);
+   glGenVertexArrays(1, &RFont_gl.vao);
 
-	glBindVertexArray(RFont_gl.vao);
+   glBindVertexArray(RFont_gl.vao);
 
-    glGenBuffers(1, &RFont_gl.verties);
-	glGenBuffers(1, &RFont_gl.tcoords);
-    
-    /* compile vertex shader */
-    RFont_gl.vShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(RFont_gl.vShader, 1, &defaultVShaderCode, NULL);
-    glCompileShader(RFont_gl.vShader);
-    
-    #ifdef RFONT_DEBUG
-    RFont_debug_shader(RFont_gl.vShader, "Vertex", "compile");
-    #endif
+   glGenBuffers(1, &RFont_gl.verties);
+   glGenBuffers(1, &RFont_gl.tcoords);
 
-    /* compile fragment shader */
-    RFont_gl.fShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(RFont_gl.fShader, 1, &defaultFShaderCode, NULL);
-    glCompileShader(RFont_gl.fShader);
+   /* compile vertex shader */
+   RFont_gl.vShader = glCreateShader(GL_VERTEX_SHADER);
+   glShaderSource(RFont_gl.vShader, 1, &defaultVShaderCode, NULL);
+   glCompileShader(RFont_gl.vShader);
 
-    
-    #ifdef RFONT_DEBUG
-    RFont_debug_shader(RFont_gl.fShader, "Fragment", "compile");
-    #endif
-    
-    /* create program and link vertex and fragment shaders */
-    RFont_gl.program = glCreateProgram();
-    glAttachShader(RFont_gl.program, RFont_gl.vShader);
-    
-    #ifdef RFONT_DEBUG
-    RFont_debug_shader(RFont_gl.program, "Vertex", "link to the program");
-    #endif
+   #ifdef RFONT_DEBUG
+   RFont_debug_shader(RFont_gl.vShader, "Vertex", "compile");
+   #endif
 
-    glAttachShader(RFont_gl.program, RFont_gl.fShader);
-    
-    #ifdef RFONT_DEBUG
-    RFont_debug_shader(RFont_gl.program, "Fragment", "link to the program");
-    #endif
+   /* compile fragment shader */
+   RFont_gl.fShader = glCreateShader(GL_FRAGMENT_SHADER);
+   glShaderSource(RFont_gl.fShader, 1, &defaultFShaderCode, NULL);
+   glCompileShader(RFont_gl.fShader);
 
-    glLinkProgram(RFont_gl.program);
+
+   #ifdef RFONT_DEBUG
+   RFont_debug_shader(RFont_gl.fShader, "Fragment", "compile");
+   #endif
+
+   /* create program and link vertex and fragment shaders */
+   RFont_gl.program = glCreateProgram();
+   glAttachShader(RFont_gl.program, RFont_gl.vShader);
+
+   #ifdef RFONT_DEBUG
+   RFont_debug_shader(RFont_gl.program, "Vertex", "link to the program");
+   #endif
+
+   glAttachShader(RFont_gl.program, RFont_gl.fShader);
+
+   #ifdef RFONT_DEBUG
+   RFont_debug_shader(RFont_gl.program, "Fragment", "link to the program");
+   #endif
+
+   glLinkProgram(RFont_gl.program);
 }
 
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
-    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-    glEnable(GL_TEXTURE_2D);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    glEnable(GL_BLEND);
+   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+   glEnable(GL_TEXTURE_2D);
+   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+   glEnable(GL_BLEND);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glDisable(GL_DEPTH_TEST);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_CULL_FACE);
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
+   glDisable(GL_DEPTH_TEST);
+   glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+   glEnable(GL_CULL_FACE);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, atlas);
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, atlas);
 
-	glBindVertexArray(RFont_gl.vao);
+   glBindVertexArray(RFont_gl.vao);
 
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.verties);
-	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), verts, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+   glEnableVertexAttribArray(0);
+   glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.verties);
+   glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), verts, GL_DYNAMIC_DRAW);
+   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tcoords);
-	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), tcoords, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    
-    glUseProgram(RFont_gl.program);
-	glDrawArrays(GL_TRIANGLES, 0, nverts);
-    glUseProgram(0);
+   glEnableVertexAttribArray(1);
+   glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tcoords);
+   glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), tcoords, GL_DYNAMIC_DRAW);
+   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+      
+   glUseProgram(RFont_gl.program);
+   glDrawArrays(GL_TRIANGLES, 0, nverts);
+      glUseProgram(0);
 
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
+   glDisableVertexAttribArray(0);
+   glDisableVertexAttribArray(1);
 
-	glBindVertexArray(0);
+   glBindVertexArray(0);
 
-    glEnable(GL_DEPTH_TEST);
+   glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free() {
@@ -768,6 +914,12 @@ void RFont_render_free() {
 
 #endif /* !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) */
 #endif /*  !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS) */
+
+/* 
+stb_truetype defines and source code required by RFont
+
+you probably don't care about this part if you're reading just the RFont code
+*/
 
 #ifndef RFONT_EXTERNAL_STB
    typedef char stbtt__check_size32[sizeof(i32)==4 ? 1 : -1];
@@ -3167,5 +3319,9 @@ STBTT_DEF int stbtt_GetGlyphBox(const stbtt_fontinfo *info, int glyph_index, int
 #pragma GCC diagnostic pop
 #endif
 #endif /* n RFONT_EXTERNAL_STB */
+
+/* 
+END of stb_truetype defines and source code required by RFont
+*/
 
 #endif /* RFONT_IMPLEMENTATION */
