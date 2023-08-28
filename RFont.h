@@ -46,6 +46,35 @@ http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ - UTF-8 decoding function
 fontstash - fontstash was used as a refference for some parts
 */
 
+/*
+
+... = [add code here]
+
+BASIC TEMPLATE :
+#define RFONT_IMPLEMENTATION
+#include "RFont.h"
+
+...
+
+int main () {
+   ...
+
+   RFont_init(window_width, window_height);
+
+   RFont_font* font = RFont_font_init("font.ttf");
+
+   while (1) {
+      ...
+      RFont_draw_text(font, "text", 100, 100, 20);
+      ...
+   }
+
+   RFont_font_free(font);
+   ...
+}
+*/
+
+
 #ifndef RFONT_NO_STDIO
 #include <stdio.h>
 #endif
