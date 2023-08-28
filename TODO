@@ -1,7 +1,4 @@
 - support direct vbo (opengl 3+ w/o rlgl) rendering
 
-- get text width function
 - support UTF-8
 - check non-English characters 
-- "debloat" stb_truetype
-(maybe true to copy some stb_truetype functions over)
