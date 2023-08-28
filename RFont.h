@@ -472,58 +472,71 @@ RFont_glyph RFont_font_add_char(RFont_font* font, u8 codepoint, size_t size) {
 }
 
 size_t RFont_text_width(RFont_font* font, const char* text, u32 size) {
-   return RFont_text_width_len(font, text, size, 0);
+   return RFont_text_width_len(font, text, 0, size);
 }
 
 size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size) {
-   int wOut = 0, 
-       width = 0,
-       prevGlyph = 0;
+	u32 codepoint, utf8state = 0;
+	int glyph, prevGlyph;
 
-   u32 codepoint, utf8state = 0;
-
+   int x = 0, x0, x1, y0, y1;
+   int width = 0;
    char* str;
-   for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
-      if (*str == '\n') { 
-         if (width > wOut)
-            wOut = width;
 
-         width = 0;
+   for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {
+      if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
+         continue;
+
+      const u8 i = codepoint - ' ';
+      
+      if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size) {
+         glyph = font->glyphs[i].src;
+         x0 = font->glyphs[i].x0;
+         x1 = font->glyphs[i].x1;
+         y0 = font->glyphs[i].y0;
+         y1 = font->glyphs[i].y1;
+      }
+      else  {
+         glyph = stbtt_FindGlyphIndex(&font->info, codepoint);
+         if (glyph == 0)
+            continue;
+         stbtt_GetGlyphBox(&font->info, glyph, &x0, &y0, &x1, &y1);
+      }
+
+      if (*str == '\n') { 
+         if (x > width)
+            width = x;
+         
+         x = 0;
          continue;
       }
 
       float scale = (float)size / font->fheight;
 
-      if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
-         continue;
+		int ix0 = floor(x0 * scale);
 
-      RFont_glyph glyph = RFont_font_add_char(font, codepoint, size);
+		int w = (ceil(x1 * scale) - ix0);
 
-      if (glyph.codepoint == 0 && glyph.size == 0)
-         continue;
-
-      int ix0 = floor(glyph.x0 * scale);
-
-      int w = (ix0 - ceil(glyph.x1 * scale));
-                  
       if (*str == '_')
-         width += (w / 5);
+         x += (w / 5);
 
-      width += ix0;
+      x += ix0;
 
       if (prevGlyph) {
-         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src) * scale;
+         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph) * scale;
 
-         width += (adv + 0.5f);
+         x += (adv + 0.5f);
       }
 
-      width += w;
+      prevGlyph = glyph;
+
+      x += w;
    }
 
-   if (width > wOut)
-      wOut = width;
+   if (x > width)
+      width = x;
 
-   return wOut;
+   return width;
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size) {
