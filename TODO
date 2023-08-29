@@ -1,4 +1,1 @@
 - support direct vbo (opengl 3+ w/o rlgl) rendering
-
-- support UTF-8
-- check non-English characters 
