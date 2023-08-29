@@ -735,7 +735,6 @@ u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
 
     u32 id = 0;
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_MULTISAMPLE);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -771,8 +770,7 @@ void RFont_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPixels,
 }
 
 void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, i32 x, i32 y, i32 w, i32 h) {
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_MULTISAMPLE);
+   glEnable(GL_TEXTURE_2D);
 
 	GLint alignment, rowLength, skipPixels, skipRows;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
@@ -793,7 +791,6 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, i32 x, i32 y, i32 w, i32 h) {
 
 #ifdef RFONT_RENDER_RLGL
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
-    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     
@@ -833,7 +830,6 @@ void RFont_render_init() {}
 
 #if defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
-    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glShadeModel(GL_SMOOTH);
@@ -916,16 +912,16 @@ void RFont_debug_shader(u32 src, const char* shader, const char* action) {
 void RFont_render_init() {
    static const char* defaultVShaderCode =
       "#version 330                       \n"
-      "layout(location = 0) in vec2 vertexPosition;            \n"
-      "layout(location = 1) in vec2 vertexTexCoord;            \n"
+      "vec3 vertexPosition;            \n"
+      "vec2 vertexTexCoord;            \n"
       "out vec2 fragTexCoord;             \n"
       "out vec4 fragColor;                \n"
 
       "uniform mat4 mvp;                  \n"
       "void main() {                      \n"
-      "    fragTexCoord = vertexTexCoord; \n"
-      "    fragColor = vec4(1.0, 1.0, 1.0, 1.0);      \n"
-      "    gl_Position = vec4(vertexPosition, 0.0, 1.0);              \n"
+      //"    fragTexCoord = vertexTexCoord; \n"
+      "    fragColor = vec4(1.0, 0.0, 0.0, 1.0);      \n"
+      "    gl_Position = mvp*vec4(vertexPosition, 1.0);             \n"
       "}                                              \n";
 
    static const char* defaultFShaderCode =
@@ -969,56 +965,54 @@ void RFont_render_init() {
    RFont_gl.program = glCreateProgram();
    glAttachShader(RFont_gl.program, RFont_gl.vShader);
 
-   #ifdef RFONT_DEBUG
-   RFont_debug_shader(RFont_gl.program, "Vertex", "link to the program");
-   #endif
-
    glAttachShader(RFont_gl.program, RFont_gl.fShader);
+//return;
+   glLinkProgram(RFont_gl.program);
+
+   glBindAttribLocation(RFont_gl.program, 0, "vertexPosition");
+   glBindAttribLocation(RFont_gl.program, 1, "vertexTexCoord");   
 
    #ifdef RFONT_DEBUG
-   RFont_debug_shader(RFont_gl.program, "Fragment", "link to the program");
+   RFont_debug_shader(RFont_gl.program, "Both", "link to the program");
    #endif
-
-   glLinkProgram(RFont_gl.program);
 }
 
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
-   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
    glEnable(GL_TEXTURE_2D);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
    glEnable(GL_BLEND);
-
-   glMatrixMode(GL_MODELVIEW);
-   glLoadIdentity();
-   glDisable(GL_DEPTH_TEST);
-   glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_CULL_FACE);
 
-   glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_2D, atlas);
 
-   glBindVertexArray(RFont_gl.vao);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, atlas);
 
-   glEnableVertexAttribArray(0);
-   glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.verties);
-   glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), verts, GL_DYNAMIC_DRAW);
-   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindVertexArray(RFont_gl.vao);
 
-   glEnableVertexAttribArray(1);
-   glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tcoords);
-   glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), tcoords, GL_DYNAMIC_DRAW);
-   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-      
-   glUseProgram(RFont_gl.program);
-   glDrawArrays(GL_TRIANGLES, 0, nverts);
-      glUseProgram(0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.verties);
+	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), verts, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-   glDisableVertexAttribArray(0);
-   glDisableVertexAttribArray(1);
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tcoords);
+	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), tcoords, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-   glBindVertexArray(0);
+	/*glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, gl->colorBuffer);
+	glBufferData(GL_ARRAY_BUFFER, nverts * sizeof(unsigned int), colors, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_FALSE, 0, NULL);*/
 
-   glEnable(GL_DEPTH_TEST);
+   glLinkProgram(RFont_gl.program);
+	glDrawArrays(GL_TRIANGLES, 0, nverts);
+   glLinkProgram(0);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	//glDisableVertexAttribArray(2);
+
+	glBindVertexArray(0);
 }
 
 void RFont_render_free() {
