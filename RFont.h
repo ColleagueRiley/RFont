@@ -682,6 +682,10 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 #include <OpenGL/gl.h>
 #endif
 
+#ifndef GL_PERSPECTIVE_CORRECTION_HINT
+#define GL_PERSPECTIVE_CORRECTION_HINT		0x0C50
+#endif
+
 #ifndef GL_TEXTURE_SWIZZLE_RGBA
 #define GL_TEXTURE_SWIZZLE_RGBA           0x8E46
 #endif
