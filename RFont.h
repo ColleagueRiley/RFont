@@ -103,7 +103,7 @@ you want to change anything
 */
 
 #ifndef RFONT_MAX_GLYPHS
-#define RFONT_MAX_GLYPHS 256
+#define RFONT_MAX_GLYPHS 652
 #endif
 
 #ifndef RFONT_ATLAS_WIDTH
@@ -125,12 +125,12 @@ you want to change anything
 typedef struct RFont_font RFont_font;
 
 typedef struct {
-    u8 codepoint; /* the character (for checking) */
-    size_t size; /* the size of the glyph */
-    u32 x, x2, h; /* coords of the character on the texture */
+   u32 codepoint; /* the character (for checking) */
+   size_t size; /* the size of the glyph */
+   u32 x, x2, h; /* coords of the character on the texture */
 
-    /* source glyph data */
-    int src, x0, y0, x1, y1;
+   /* source glyph data */
+   int src, x0, y0, x1, y1;
 } RFont_glyph;
 
 /**
@@ -177,7 +177,7 @@ inline void RFont_font_free(RFont_font* font);
  * @param size The size of the character.
  * @return The `RFont_glyph` created from the data and added to the atlas.
 */
-inline RFont_glyph RFont_font_add_char(RFont_font* font, u8 ch, size_t size);
+inline RFont_glyph RFont_font_add_char(RFont_font* font, u32 ch, size_t size);
 
 /**
  * @brief Get the width of the text based on the size using the font.
@@ -314,7 +314,10 @@ struct RFont_font {
    bool free_font_memory;
    int fheight; /* font height from stb */
 
+   int* lut;
+
    RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
+   size_t glyph_len;
 
    u32 atlas; /* atlas texture */
    i32 atlasX; /* the current x position inside the atlas */
@@ -349,6 +352,7 @@ RFont_font* RFont_font_init(char* font_name) {
 
    fread(ttf_buffer, 1, size, ttf_file);
 
+
    return RFont_font_init_data((u8*)ttf_buffer, true);
 }
 #endif
@@ -364,6 +368,7 @@ RFont_font* RFont_font_init_data(u8* font_data, bool auto_free) {
    font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
    #endif
    font->atlasX = 0;
+   font->glyph_len = 0;
 
    font->free_font_memory = auto_free;
    
@@ -429,29 +434,30 @@ static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
 	return *state;
 }
 
-
-RFont_glyph RFont_font_add_char(RFont_font* font, u8 codepoint, size_t size) {
+RFont_glyph RFont_font_add_char(RFont_font* font, u32 codepoint, size_t size) {
    i32 w, h;
    
-   const u8 i = codepoint - ' ';
+	u32 i;
+   for (i = 0; i < font->glyph_len; i++)
+      if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
+         return font->glyphs[i];
 
-   if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
-      return font->glyphs[i];
-
+   font->glyph_len++;
+   
    float scale = (float)size / font->fheight;
 
-   font->glyphs->src = stbtt_FindGlyphIndex(&font->info, codepoint);
+   font->glyphs[i].src = stbtt_FindGlyphIndex(&font->info, codepoint);
 
-   if (font->glyphs->src == 0)
+   if (font->glyphs[i].src == 0)
       return (RFont_glyph){0, 0};
    
-   stbtt_GetGlyphBox(&font->info, font->glyphs->src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
+   stbtt_GetGlyphBox(&font->info, font->glyphs[i].src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
 
    #ifndef RFONT_EXTERNAL_STB
-   u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs->src, 
+   u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs[i].src, 
                                                    font->glyphs[i].x0, font->glyphs[i].y0, font->glyphs[i].x1, font->glyphs[i].y1, &w, &h, 0, 0);
    #else
-   u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs->src, &w, &h, 0, 0);
+   u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs[i].src, &w, &h, 0, 0);
    #endif
 
    font->glyphs[i].codepoint = codepoint;
@@ -521,10 +527,9 @@ size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 
          x += (w / 5);
 
       x += ix0;
-
+   
       if (prevGlyph) {
          float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph) * scale;
-
          x += (adv + 0.5f);
       }
 
@@ -544,122 +549,127 @@ void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size)
 }
 
 void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size) {
-    static float verts[1024 * 2];
-    static float tcoords[1024 * 2];
+   static float verts[1024 * 2];
+   static float tcoords[1024 * 2];
 
-    i32 startX = x,
-        i = 0;
-    
-    char* str;
+   y += size;
 
-    int prevGlyph = 0;
+   i32 startX = x,
+      i = 0;
 
-    u32 codepoint, utf8state = 0;
+   char* str;
 
-    for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
-      if (*str == '\n') { 
-         x = startX;
-         y += size;
-         continue;
-      }
+   int prevGlyph = 0;
 
-      float scale = (float)size / font->fheight;
+   u32 codepoint, utf8state = 0;
 
-      if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
-         continue;
+   int w;
 
-      /* 
-      I would like to use this method, 
-      it makes it so I only have to load each glyph once 
-      instead of once per size
-      however, it has some issues so I've decided not to use it for now
-
-      RFont_glyph glyph = RFont_font_add_char(font, codepoint, RFONT_ATLAS_HEIGHT);
-      */
-
-      RFont_glyph glyph = RFont_font_add_char(font, codepoint, size);
-
-      if (glyph.codepoint == 0 && glyph.size == 0)
-         continue;
-
-		int ix0 = floor(glyph.x0 * scale);
-		int ix1 = ceil(glyph.x1 * scale);
-
-      int iy0 = floor(-glyph.y1 * scale + 0);
-      int iy1 = ceil(-glyph.y0 * scale + 0);
-
-		int w = (ix1 - ix0);
-      int h = (iy1 - iy0);
-
-      int realY = y + iy0;
-
-      switch (*str) {
-         case '_':
-               x += (w / 5);
-               realY -= (size / 6);
-               break;
-         case '(':
-         case ')':
-         case ';':
-               realY -= (size / 16);
-               break;
-         default: break;
-      }
-
-      x += ix0;
-
-      if (prevGlyph) {
-         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src) * scale;
-
-         x += (adv + 0.5f);
-      }
-
-      prevGlyph = glyph.src;
-
-      verts[i] = RFONT_GET_WORLD_X(x, RFont_width); 
-      verts[i + 1] = RFONT_GET_WORLD_Y(realY, RFont_height);
-      /*  */
-      verts[i + 2] = RFONT_GET_WORLD_X(x, RFont_width);
-      verts[i + 3] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
-      /*  */
-      verts[i + 4] = RFONT_GET_WORLD_X(x + w, RFont_width);
-      verts[i + 5] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
-      /*  */
-      /*  */
-      verts[i + 6] = RFONT_GET_WORLD_X(x + w, RFont_width);
-      verts[i + 7] = RFONT_GET_WORLD_Y(realY, RFont_height);
-      /*  */
-      verts[i + 8] = RFONT_GET_WORLD_X(x, RFont_width); 
-      verts[i + 9] = RFONT_GET_WORLD_Y(realY, RFont_height);
-      /*  */
-      verts[i + 10] = RFONT_GET_WORLD_X(x + w, RFont_width);
-      verts[i + 11] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
-
-      /* texture coords */
-
-      tcoords[i] = RFONT_GET_TEXPOSX(glyph.x);
-      tcoords[i + 1] = 0;
-      /*  */
-      tcoords[i + 2] = RFONT_GET_TEXPOSX(glyph.x); 
-      tcoords[i + 3] = RFONT_GET_TEXPOSY(glyph.h);
-      /*  */
-      tcoords[i + 4] = RFONT_GET_TEXPOSX(glyph.x2);
-      tcoords[i + 5] = RFONT_GET_TEXPOSY(glyph.h);
-      /*  */
-      /*  */
-      tcoords[i + 6] = RFONT_GET_TEXPOSX(glyph.x2);
-      tcoords[i + 7] = 0;
-      /*  */
-      tcoords[i + 8] = RFONT_GET_TEXPOSX(glyph.x);
-      tcoords[i + 9] = 0;
-      /*  */
-      tcoords[i + 10] = RFONT_GET_TEXPOSX(glyph.x2);
-      tcoords[i + 11] = RFONT_GET_TEXPOSY(glyph.h);
-
-      i += 12;
-      x += w;
+   for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
+   if (*str == '\n') { 
+      x = startX;
+      y += size;
+      continue;
    }
-    
+   if (* str == ' ')
+      x += (size / 4);
+
+   float scale = (float)size / font->fheight;
+
+   if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
+      continue;
+
+   /* 
+   I would like to use this method, 
+   it makes it so I only have to load each glyph once 
+   instead of once per size
+   however, it has some issues so I've decided not to use it for now
+
+   RFont_glyph glyph = RFont_font_add_char(font, codepoint, RFONT_ATLAS_HEIGHT);
+   */
+
+   RFont_glyph glyph = RFont_font_add_char(font, codepoint, size);
+
+   if (glyph.codepoint == 0 && glyph.size == 0)
+      continue;
+
+   int ix0 = floor(glyph.x0 * scale);
+   int ix1 = ceil(glyph.x1 * scale);
+
+   int iy0 = floor(-glyph.y1 * scale + 0);
+   int iy1 = ceil(-glyph.y0 * scale + 0);
+
+   w = (ix1 - ix0);
+   int h = (iy1 - iy0);
+
+   int realY = y + iy0;
+
+   switch (*str) {
+      case '_':
+            x += (w / 5);
+            realY -= (size / 6);
+            break;
+      case '(':
+      case ')':
+      case ';':
+            realY -= (size / 16);
+            break;
+      default: break;
+   }
+
+   x += ix0;
+
+   if (prevGlyph) {
+      float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src) * scale;
+      x += (adv + 0.5f);
+   }
+
+   prevGlyph = glyph.src;
+
+   verts[i] = RFONT_GET_WORLD_X(x, RFont_width); 
+   verts[i + 1] = RFONT_GET_WORLD_Y(realY, RFont_height);
+   /*  */
+   verts[i + 2] = RFONT_GET_WORLD_X(x, RFont_width);
+   verts[i + 3] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+   /*  */
+   verts[i + 4] = RFONT_GET_WORLD_X(x + w, RFont_width);
+   verts[i + 5] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+   /*  */
+   /*  */
+   verts[i + 6] = RFONT_GET_WORLD_X(x + w, RFont_width);
+   verts[i + 7] = RFONT_GET_WORLD_Y(realY, RFont_height);
+   /*  */
+   verts[i + 8] = RFONT_GET_WORLD_X(x, RFont_width); 
+   verts[i + 9] = RFONT_GET_WORLD_Y(realY, RFont_height);
+   /*  */
+   verts[i + 10] = RFONT_GET_WORLD_X(x + w, RFont_width);
+   verts[i + 11] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+
+   /* texture coords */
+
+   tcoords[i] = RFONT_GET_TEXPOSX(glyph.x);
+   tcoords[i + 1] = 0;
+   /*  */
+   tcoords[i + 2] = RFONT_GET_TEXPOSX(glyph.x); 
+   tcoords[i + 3] = RFONT_GET_TEXPOSY(glyph.h);
+   /*  */
+   tcoords[i + 4] = RFONT_GET_TEXPOSX(glyph.x2);
+   tcoords[i + 5] = RFONT_GET_TEXPOSY(glyph.h);
+   /*  */
+   /*  */
+   tcoords[i + 6] = RFONT_GET_TEXPOSX(glyph.x2);
+   tcoords[i + 7] = 0;
+   /*  */
+   tcoords[i + 8] = RFONT_GET_TEXPOSX(glyph.x);
+   tcoords[i + 9] = 0;
+   /*  */
+   tcoords[i + 10] = RFONT_GET_TEXPOSX(glyph.x2);
+   tcoords[i + 11] = RFONT_GET_TEXPOSY(glyph.h);
+
+   i += 12;
+   x += w;
+   }
+
    #ifndef RFONT_NO_GRAPHICS
    RFont_render_text(font->atlas, verts, tcoords, i / 2);
    #endif
