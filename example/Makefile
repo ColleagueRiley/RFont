@@ -11,7 +11,7 @@ ifeq ($(detected_OS),Windows)
 	LIBS := -lopengl32 -lshell32 -lgdi32 -lm
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
-	LIBS := -I./ext/Silicon/ ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo
+	LIBS := -I./ext/Silicon/ ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
 endif
 ifeq ($(detected_OS),Linux)
     LIBS := -I./include -lX11 -lGLX -lm -lGL
@@ -42,10 +42,10 @@ clean:
 debug:
 	make clean
 
-	#gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
-	#gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl -D RFONT_DEBUG
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl -D RFONT_DEBUG
 	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
-	#./gl gl &
+	./gl gl &
 	./gl3 gl3 
-	#./rlgl rlgl &
+	./rlgl rlgl &
