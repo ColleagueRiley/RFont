@@ -80,9 +80,9 @@ int main () {
 #endif
 
 #include <stdlib.h>
-#include <assert.h>
 #include <math.h>
-#include <stdbool.h>
+#include <assert.h>
+#include <string.h>
 
 #if !defined(u8)
     #include <stdint.h>
@@ -95,6 +95,7 @@ int main () {
 	typedef int32_t    i32;
 	typedef uint64_t   u64;
 	typedef int64_t    i64;
+   typedef u8 b8;
 #endif
 
 /* 
@@ -152,7 +153,7 @@ inline void RFont_update_framebuffer(size_t width, size_t height);
  * @param font_name The TTF file path.
  * @return The `RFont_font` created using the TTF file data.
 */
-inline RFont_font* RFont_font_init(char* font_name);
+inline RFont_font* RFont_font_init(const char* font_name);
 #endif
 
 
@@ -162,7 +163,7 @@ inline RFont_font* RFont_font_init(char* font_name);
  * @param auto_free If the memory should be automatically freed by `RFont_font_free`.
  * @return The `RFont_font` created from the data.
 */
-inline RFont_font* RFont_font_init_data(u8* font_data, bool auto_free);
+inline RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free);
 
 /**
  * @brief Free data from the font stucture, including the stucture itself
@@ -229,7 +230,7 @@ inline void RFont_render_init(void); /* any initalizations the renderer needs to
 inline u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
 inline void RFont_bitmap_to_atlas(u32 atlnitas, u8* bitmap, i32 x, i32 y, i32 w, i32 h); /* add the given bitmap to the texture based on the given coords and size data */
 inline void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts); /* render the text, using the vertices, atlas texture, and texture coords given. */
-inline void RFont_render_free(void); /* free any memory the renderer might need to free */
+inline void RFont_render_free(u32 atlas); /* free any memory the renderer might need to free */
 #endif
 
 #endif /* RFONT_H */
@@ -311,7 +312,7 @@ you probably care about this part
 
 struct RFont_font {
    stbtt_fontinfo info; /* source stb font */
-   bool free_font_memory;
+   b8 free_font_memory;
    int fheight; /* font height from stb */
 
    int* lut;
@@ -341,24 +342,24 @@ void RFont_init(size_t width, size_t height) {
 }
 
 #ifndef RFONT_NO_STDIO
-RFont_font* RFont_font_init(char* font_name) {
+RFont_font* RFont_font_init(const char* font_name) {
    FILE* ttf_file = fopen(font_name, "rb");
 
    fseek(ttf_file, 0U, SEEK_END);
    size_t size = ftell(ttf_file);
 
-   char* ttf_buffer = malloc(sizeof(char) * size); 
+   char* ttf_buffer = (char*)malloc(sizeof(char) * size); 
    fseek(ttf_file, 0U, SEEK_SET);
 
    fread(ttf_buffer, 1, size, ttf_file);
 
 
-   return RFont_font_init_data((u8*)ttf_buffer, true);
+   return RFont_font_init_data((u8*)ttf_buffer, 1);
 }
 #endif
 
-RFont_font* RFont_font_init_data(u8* font_data, bool auto_free) {
-   RFont_font* font = malloc(sizeof(RFont_font));
+RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free) {
+   RFont_font* font = (RFont_font*)malloc(sizeof(RFont_font));
    
    stbtt_InitFont(&font->info, font_data, 0);
 
@@ -377,8 +378,7 @@ RFont_font* RFont_font_init_data(u8* font_data, bool auto_free) {
 
 void RFont_font_free(RFont_font* font) {
    #ifndef RFONT_NO_GRAPHICS
-   glDeleteTextures(1, &font->atlas);
-   RFont_render_free();
+   RFont_render_free(font->atlas);
    #endif
 
    if (font->free_font_memory)
@@ -489,7 +489,7 @@ size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 
    int width = 0;
    char* str;
 
-   for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {
+   for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {
       if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
          continue;
 
@@ -565,7 +565,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 
    int w;
 
-   for (str = (char*)text; (len == 0 || (str - text) < len) && *str; str++) {        
+   for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {        
    if (*str == '\n') { 
       x = startX;
       y += size;
@@ -691,9 +691,6 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
 #endif
 
 #ifdef RFONT_DEBUG
-#ifdef RFONT_RENDER_LEGACY
-GLAPI void APIENTRY glDebugMessageCallback (GLDEBUGPROC callback, const void *userParam);
-#endif
 
 void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     if (type != GL_DEBUG_TYPE_ERROR)
@@ -731,7 +728,7 @@ void RFont_opengl_getError() {
 #endif
 
 u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
-    #ifdef RFONT_DEBUG
+    #if defined(RFONT_DEBUG) && !defined(RFONT_RENDER_LEGACY)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // For synchronous output
     glDebugMessageCallback(RFont_debugCallback, 0); // Set the callback function
@@ -750,7 +747,7 @@ u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
     
     glPixelStorei(GL_UNPACK_ROW_LENGTH, atlasWidth);
     
-    u8* data = calloc(sizeof(u8), atlasWidth * atlasHeight * 4);
+    u8* data = (u8*)calloc(sizeof(u8), atlasWidth * atlasHeight * 4);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlasWidth, atlasHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
@@ -813,7 +810,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	rlBegin(GL_QUADS);
 
 	i32 i, j = 0;
-	for (i = 0; i < (nverts * 6); i += 2) {
+	for (i = 0; (size_t)i < (nverts * 6); i += 2) {
 		rlTexCoord2f(tcoords[i], tcoords[i + 1]);
 
 		if (j++ && j == 2 && (j -= 3))
@@ -828,7 +825,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
     glEnable(GL_DEPTH_TEST);
 }
 
-void RFont_render_free(void) {}
+void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
 void RFont_render_init() {}
 #endif /* RFONT_RENDER_RLGL */
 
@@ -852,7 +849,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 
 	glBegin(GL_TRIANGLES);
 
-	i32 i;
+	size_t i;
 	for (i = 0; i < (nverts * 2); i += 2) {
 		glTexCoord2f(tcoords[i], tcoords[i + 1]);
 		
@@ -865,7 +862,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
     glEnable(GL_DEPTH_TEST);
 }
 
-void RFont_render_free() {}
+void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
 void RFont_render_init() {}
 #endif /* defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)  */
 
@@ -1019,21 +1016,23 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	glBindVertexArray(0);
 }
 
-void RFont_render_free() {
-    if (RFont_gl.vao == 0)
-        return;
-    
-    /* free vertex array */
-    glDeleteVertexArrays(1, &RFont_gl.vao);
+void RFont_render_free(u32 atlas) {
+   glDeleteTextures(1, &atlas);
 
-    /* free buffers */
-    glDeleteBuffers(1, &RFont_gl.tcoords);
-    glDeleteBuffers(1, &RFont_gl.verties);
+   if (RFont_gl.vao == 0)
+      return;
+   
+   /* free vertex array */
+   glDeleteVertexArrays(1, &RFont_gl.vao);
 
-    /* free program data */
-    glDeleteShader(RFont_gl.vShader);
-    glDeleteShader(RFont_gl.fShader);
-    glDeleteProgram(RFont_gl.program);
+   /* free buffers */
+   glDeleteBuffers(1, &RFont_gl.tcoords);
+   glDeleteBuffers(1, &RFont_gl.verties);
+
+   /* free program data */
+   glDeleteShader(RFont_gl.vShader);
+   glDeleteShader(RFont_gl.fShader);
+   glDeleteProgram(RFont_gl.program);
 }
 
 #endif /* !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) */
