@@ -30,18 +30,22 @@ ext/Silicon/mac.o:
 	cd ext/Silicon/ && gcc -c *.m
 
 gl:
-	gcc main.c $(LIBS) -I./ext -I../ $(LIBS) -D RFONT_RENDER_LEGACY -o gl
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
 rlgl:
-	gcc main.c $(LIBS) -I./ext -I../ $(LIBS) -D RFONT_RENDER_RLGL -o rlgl
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl
 gl3:
-	gcc main.c $(LIBS) -I./ext -I../ $(LIBS) -o gl3
+	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3
 
 clean:
 	rm gl3 gl rlgl -f
 
 debug:
 	make clean
-	make
-	./gl gl &
-	./gl3 gl3 &
-	./rlgl rlgl
+
+	#gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
+	#gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl -D RFONT_DEBUG
+	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
+
+	#./gl gl &
+	./gl3 gl3 
+	#./rlgl rlgl &
