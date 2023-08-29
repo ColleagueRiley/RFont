@@ -12,7 +12,6 @@
 
 #ifdef RFONT_RENDER_RLGL
 #include "rlgl.h"
-#define glColor4ub rlColor4ub
 #endif
 
 #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) && defined(_WIN32)
@@ -23,9 +22,9 @@
 #include "glad.h"
 #endif
 
+#include "RFont.h"
 #include "RGFW.h"
 
-#include "RFont.h"
 
 #include <stdbool.h>
 
@@ -62,7 +61,11 @@ int main(int argc, char **argv) {
         glClearColor(100, 100, 100, 255);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        glColor4ub(255, 0, 0, 255);
+        #ifdef RFONT_RENDER_RLGL
+        rlColor4ub(255, 0, 0, 255);
+        #else
+        glColor4f(1.0f, 0, 0, 1.0f);
+        #endif
 
         RFont_draw_text(font, "abcdefghijklmnopqrstuvwxyz\n1234567890@.<>,/?\\|[{]}", 0, 0, 60);
         RFont_draw_text(font, "`~!#$%^&*()_-=+", 0, 120, 60);
