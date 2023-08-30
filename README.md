@@ -1,4 +1,7 @@
 # RFont
+![logo](logo.png)
+![image](Screenshot.png)
+
 Simple single header modular font rendering library\
 The library is designed to be lightweight while also supporting the ablitiy to add your own rendering system.\
 
