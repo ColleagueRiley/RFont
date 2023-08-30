@@ -471,7 +471,7 @@ void RFont_font_add_string(RFont_font* font, const char* string, size_t* sizes, 
 void RFont_font_add_string_len(RFont_font* font, const char* string, size_t strLen, size_t* sizes, size_t sizeLen) {
    u32 i;
    char* str;
-   for (str = string; (!strLen || (str - string) < strLen) && *str; str++)
+   for (str = (char*)string; (!strLen || (str - string) < strLen) && *str; str++)
       for (i = 0; i < sizeLen; i++)
          RFont_font_add_char(font, *str, sizes[i]);
 }
