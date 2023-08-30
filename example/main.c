@@ -70,10 +70,12 @@ int main(int argc, char **argv) {
         RFont_set_color(0.0f, 1.0f, 0, 1.0f);
 
         RFont_draw_text(font, "abcdefghijklmnopqrstuvwxyz\n1234567890@.<>,/?\\|[{]}", 0, 0, 60);
-        RFont_draw_text(font, "`~!#$%^&*()_-=+", 0, 120, 60);
+        RFont_draw_text_spacing(font, "`~!#$%^&*()_-=+", 0, 120, 60, 1.0f);
+        RFont_set_color(1.0f, 0.0f, 0, 1.0f);
         RFont_draw_text(font, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nSomething about a fast lazy dog.", 0, 210, 20);
-
-        RFont_draw_text(font, "RFont_draw_text(); ⌫", 0, 240, 60);
+        RFont_set_color(0.0f, 1.0f, 0, 1.0f);
+        RFont_draw_text(font, "RFont_draw_text(); ⌫§", 0, 240, 60);
+        RFont_set_color(1.0f, 0.0f, 0, 1.0f);
         RFont_draw_text(japanese, "テキスト例", 0, 300, 60);
         
         #if defined(RFONT_RENDER_RLGL)
