@@ -47,5 +47,5 @@ debug:
 	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
 	./gl gl &
-	./gl3 gl3 
+	./gl3 gl3 &
 	./rlgl rlgl &
