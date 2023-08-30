@@ -19,8 +19,6 @@
 #include "ext/glad.h"
 #endif
 
-#include <GL/gl.h>
-
 #include "RFont.h"
 
 #include "RGFW.h"
