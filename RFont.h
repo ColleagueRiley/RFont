@@ -471,7 +471,7 @@ void RFont_font_add_string(RFont_font* font, const char* string, size_t* sizes, 
 void RFont_font_add_string_len(RFont_font* font, const char* string, size_t strLen, size_t* sizes, size_t sizeLen) {
    u32 i;
    char* str;
-   for (str = (char*)string; (!strLen || (str - string) < strLen) && *str; str++)
+   for (str = string; (!strLen || (str - string) < strLen) && *str; str++)
       for (i = 0; i < sizeLen; i++)
          RFont_font_add_char(font, *str, sizes[i]);
 }
@@ -600,7 +600,7 @@ size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, i32 x, i32 y, u32 size) {
-   RFont_draw_text_len(font, text, 0, x, y, size, 1.0f);
+   RFont_draw_text_len(font, text, 0, x, y, size, 0.0f);
 }
 
 void RFont_draw_text_spacing(RFont_font* font, const char* text, i32 x, i32 y, u32 size, float spacing) {
@@ -628,7 +628,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
          y += size;
          continue;
       }
-      if (* str == ' ')
+      if (*str == ' ')
          x += (size / 4);
 
       float scale = (float)size / font->fheight;
@@ -692,13 +692,17 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
       verts[i + 8] = RFONT_GET_WORLD_X(x, RFont_width); 
       verts[i + 9] = RFONT_GET_WORLD_Y(realY, RFont_height);
       /*  */
+
       verts[i + 10] = RFONT_GET_WORLD_X(x + w, RFont_width);
       verts[i + 11] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
 
       /* texture coords */
 
+      //#if defined(RFONT_RENDER_LEGACY) || defined(RFONT_RENDER_RLGL)
       tcoords[i] = RFONT_GET_TEXPOSX(glyph.x);
       tcoords[i + 1] = 0;
+      //#endif
+
       /*  */
       tcoords[i + 2] = RFONT_GET_TEXPOSX(glyph.x); 
       tcoords[i + 3] = RFONT_GET_TEXPOSY(glyph.h);
@@ -712,7 +716,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
       /*  */
       tcoords[i + 8] = RFONT_GET_TEXPOSX(glyph.x);
       tcoords[i + 9] = 0;
-      /*  */
+      /*  */ 
       tcoords[i + 10] = RFONT_GET_TEXPOSX(glyph.x2);
       tcoords[i + 11] = RFONT_GET_TEXPOSY(glyph.h);
 
@@ -939,7 +943,8 @@ typedef struct {
         colors,
         program, 
         vShader, 
-        fShader;
+        fShader,
+        ebo;
 } RFont_gl_info;
 
 RFont_gl_info RFont_gl = { 0 };
@@ -1027,8 +1032,8 @@ void RFont_render_init() {
 
    glGenBuffers(1, &RFont_gl.verties);
    glGenBuffers(1, &RFont_gl.tcoords);
-
    glGenBuffers(1, &RFont_gl.colors);
+   glGenBuffers(1, &RFont_gl.ebo);
 
    /* compile vertex shader */
    RFont_gl.vShader = glCreateShader(GL_VERTEX_SHADER);
@@ -1106,6 +1111,26 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
    free(colors);
+
+   GLushort* indices = malloc(sizeof(GLushort) * 6 * nverts);
+   int k = 0;
+
+   int j;
+   for (j = 0; j < (6 * nverts); j += 6) {
+      indices[j] = 4*  k;
+      indices[j + 1] = 4*k + 1;
+      indices[j + 2] = 4*k + 2;
+      indices[j + 3] = 4*k;
+      indices[j + 4] = 4*k + 2;
+      indices[j + 5] = 4*k + 3;
+
+      k++;
+   }
+
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, RFont_gl.ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * 6 * nverts, indices, GL_STATIC_DRAW);
+
+   free(indices);
 
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, atlas);
