@@ -471,7 +471,7 @@ void RFont_font_add_string(RFont_font* font, const char* string, size_t* sizes, 
 void RFont_font_add_string_len(RFont_font* font, const char* string, size_t strLen, size_t* sizes, size_t sizeLen) {
    u32 i;
    char* str;
-   for (str = string; (!strLen || (str - string) < strLen) && *str; str++)
+   for (str = (char*)string; (!strLen || (str - string) < strLen) && *str; str++)
       for (i = 0; i < sizeLen; i++)
          RFont_font_add_char(font, *str, sizes[i]);
 }
@@ -886,7 +886,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 	rlPopMatrix();
 
 	rlSetTexture(0);
-    glEnable(GL_DEPTH_TEST);
+   glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
@@ -937,14 +937,8 @@ void RFont_render_init() {}
 
 #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)
 typedef struct {
-   GLuint vao, 
-        verties, 
-        tcoords, 
-        colors,
-        program, 
-        vShader, 
-        fShader,
-        ebo;
+   GLuint vao, vbo, tbo, cbo, ebo,
+            program, vShader, fShader;
 } RFont_gl_info;
 
 RFont_gl_info RFont_gl = { 0 };
@@ -1030,9 +1024,9 @@ void RFont_render_init() {
 
    glBindVertexArray(RFont_gl.vao);
 
-   glGenBuffers(1, &RFont_gl.verties);
-   glGenBuffers(1, &RFont_gl.tcoords);
-   glGenBuffers(1, &RFont_gl.colors);
+   glGenBuffers(1, &RFont_gl.vbo);
+   glGenBuffers(1, &RFont_gl.tbo);
+   glGenBuffers(1, &RFont_gl.cbo);
    glGenBuffers(1, &RFont_gl.ebo);
 
    /* compile vertex shader */
@@ -1086,12 +1080,12 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glUseProgram(RFont_gl.program);
 
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.verties);
+	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.vbo);
 	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), verts, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tcoords);
+	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.tbo);
 	glBufferData(GL_ARRAY_BUFFER, nverts * 2 * sizeof(float), tcoords, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -1106,7 +1100,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    }
 
 	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.colors);
+	glBindBuffer(GL_ARRAY_BUFFER, RFont_gl.cbo);
 	glBufferData(GL_ARRAY_BUFFER, nverts * 4 * sizeof(float), colors, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -1135,7 +1129,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, atlas);
 
-	glDrawArrays(GL_TRIANGLES, 0, nverts);   
+   glDrawArrays(GL_TRIANGLES, 0, nverts);   
    glUseProgram(0);
 
 	glDisable(GL_TEXTURE_2D);
@@ -1152,8 +1146,8 @@ void RFont_render_free(u32 atlas) {
    RFont_gl.vao = 0;
 
    /* free buffers */
-   glDeleteBuffers(1, &RFont_gl.tcoords);
-   glDeleteBuffers(1, &RFont_gl.verties);
+   glDeleteBuffers(1, &RFont_gl.tbo);
+   glDeleteBuffers(1, &RFont_gl.vbo);
 
    /* free program data */
    glDeleteShader(RFont_gl.vShader);
