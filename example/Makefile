@@ -11,23 +11,16 @@ ifeq ($(detected_OS),Windows)
 	LIBS := -lopengl32 -lshell32 -lgdi32 -lm
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
-	LIBS := -I./ext/Silicon/ ./ext/Silicon/*.o -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
+	LIBS := -I./ext/Silicon/ -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
 endif
 ifeq ($(detected_OS),Linux)
     LIBS := -I./include -lX11 -lGLX -lm -lGL
 endif
 
 all:
-	@if [ $(shell uname) = Darwin ]; then\
-		make ext/Silicon/mac.o;\
-	fi
-
 	make gl
 	make gl3
 	make rlgl
-
-ext/Silicon/mac.o:
-	cd ext/Silicon/ && gcc -c *.m
 
 gl:
 	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
