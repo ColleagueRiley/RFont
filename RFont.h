@@ -119,6 +119,10 @@ you want to change anything
 #define RFONT_INIT_TEXT_SIZE 500
 #endif
 
+#ifndef RFONT_INIT_VERTS
+#define RFONT_INIT_VERTS 1024
+#endif
+
 /* make sure RFont declares aren't declared twice */
 #ifndef RFONT_H
 #define RFONT_H
@@ -608,8 +612,21 @@ void RFont_draw_text_spacing(RFont_font* font, const char* text, i32 x, i32 y, u
 }
 
 void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size, float spacing) {
-   static float verts[1024 * 6];
-   static float tcoords[1024 * 6];
+   float* verts;
+   float* tcoords;
+
+   static float arr_verts[RFONT_INIT_VERTS * 6];
+   static float arr_tcoords[RFONT_INIT_VERTS * 6];
+
+   if (len >= RFONT_INIT_VERTS) {
+      verts = (float*)malloc(len * 6 * sizeof(float));
+      tcoords = (float*)malloc(len * 6 * sizeof(float));
+   }
+
+   else {
+      verts = arr_verts;
+      tcoords = arr_tcoords;
+   }
 
    y += size;
 
@@ -730,6 +747,11 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
    #ifndef RFONT_NO_GRAPHICS
    RFont_render_text(font->atlas, verts, tcoords, i / 2);
    #endif
+
+   if (len >= RFONT_INIT_VERTS) {
+      free(verts);
+      free(tcoords);
+   }
 }
 
 #if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
