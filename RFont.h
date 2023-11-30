@@ -608,8 +608,8 @@ void RFont_draw_text_spacing(RFont_font* font, const char* text, i32 x, i32 y, u
 }
 
 void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size, float spacing) {
-   static float verts[1024 * 2];
-   static float tcoords[1024 * 2];
+   static float verts[1024 * 6];
+   static float tcoords[1024 * 6];
 
    y += size;
 
