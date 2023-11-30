@@ -70,6 +70,7 @@ int main () {
    }
 
    RFont_font_free(font);
+   RFont_close();
    ...
 }
 */
@@ -144,6 +145,10 @@ typedef struct {
  * @param height The framebuffer height.
 */
 inline void RFont_init(size_t width, size_t height);
+/**
+ * @brief Frees data allocated by the RFont for the RFont
+*/
+inline void RFont_close(void);
 /**
  * @brief Just updates the framebuffer size.
  * @param width The framebuffer width.
@@ -366,6 +371,9 @@ struct RFont_font {
 
 size_t RFont_width = 0, RFont_height = 0;
 
+float* RFont_verts;
+float* RFont_tcoords;
+
 void RFont_update_framebuffer(size_t width, size_t height) {
    /* set size of the framebuffer (for rendering later on) */
    RFont_width = width;
@@ -379,6 +387,9 @@ void RFont_init(size_t width, size_t height) {
     /* init any rendering stuff that needs to be initalized (eg. vbo objects) */
     RFont_render_init();
     #endif
+
+   RFont_verts = malloc(sizeof(float) * RFONT_INIT_VERTS * 600);
+   RFont_tcoords = malloc(sizeof(float) * RFONT_INIT_VERTS * 600);
 }
 
 #ifndef RFONT_NO_STDIO
@@ -425,6 +436,11 @@ void RFont_font_free(RFont_font* font) {
       free(font->info.data);
    
    free(font);
+}
+
+void RFont_close(void) {
+   free(RFont_verts);
+   free(RFont_tcoords);
 }
 
 
@@ -612,21 +628,8 @@ void RFont_draw_text_spacing(RFont_font* font, const char* text, i32 x, i32 y, u
 }
 
 void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, i32 y, u32 size, float spacing) {
-   float* verts;
-   float* tcoords;
-
-   static float arr_verts[RFONT_INIT_VERTS * 6];
-   static float arr_tcoords[RFONT_INIT_VERTS * 6];
-
-   if (len >= RFONT_INIT_VERTS) {
-      verts = (float*)malloc(len * 6 * sizeof(float));
-      tcoords = (float*)malloc(len * 6 * sizeof(float));
-   }
-
-   else {
-      verts = arr_verts;
-      tcoords = arr_tcoords;
-   }
+   float* verts = RFont_verts;
+   float* tcoords = RFont_tcoords;
 
    y += size;
 
@@ -747,11 +750,6 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, i32 x, 
    #ifndef RFONT_NO_GRAPHICS
    RFont_render_text(font->atlas, verts, tcoords, i / 2);
    #endif
-
-   if (len >= RFONT_INIT_VERTS) {
-      free(verts);
-      free(tcoords);
-   }
 }
 
 #if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
