@@ -133,10 +133,11 @@ typedef struct RFont_font RFont_font;
 typedef struct {
    u32 codepoint; /* the character (for checking) */
    size_t size; /* the size of the glyph */
-   float x, x2, h; /* coords of the character on the texture */
+   i32 x, x2;  /* coords of the character on the texture */
 
    /* source glyph data */
-   int src, x0, y0, x1, y1, advance, left;
+   i32 src;
+   float w, h, y1, advance;
 } RFont_glyph;
 
 /**
@@ -221,11 +222,22 @@ inline size_t RFont_text_width(RFont_font* font, const char* text, u32 size);
  * @brief Get the width of the text based on the size using the font, using a given length.
  * @param font The font stucture to use for drawing
  * @param text The string to draw 
- * @param len The length of the string
  * @param size The size of the text
+ * @param spacing The spacing of the text
  * @return The width of the text based on the size
 */
-inline size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size);
+inline size_t RFont_text_width_spacing(RFont_font* font, const char* text, float spacing, u32 size);
+
+/**
+ * @brief Get the width of the text based on the size using the font, using a given length.
+ * @param font The font stucture to use for drawing
+ * @param text The string to draw 
+ * @param len The length of the string
+ * @param size The size of the text
+ * @param spacing The spacing of the text
+ * @return The width of the text based on the size
+*/
+inline size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, float spacing);
 
 /**
  * @brief Draw a text string using the font.
@@ -340,8 +352,7 @@ STBTT_DEF u32 ttULONG(u8 *p);
 
 STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, int offset);
 
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixelBox(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int x0, int y0, int x1, int y1, 
-                                                            int *width, int *height, int *xoff, int *yoff);
+STBTT_DEF unsigned char* stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int *width, int *height, int *xoff, int *yoff);
 
 STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codepoint);
 
@@ -358,7 +369,7 @@ you probably care about this part
 struct RFont_font {
    stbtt_fontinfo info; /* source stb font */
    b8 free_font_memory;
-   int fheight; /* font height from stb */
+   float fheight; /* font height from stb */
 
    int* lut;
 
@@ -415,6 +426,12 @@ RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free) {
    stbtt_InitFont(&font->info, font_data, 0);
 
    font->fheight = ttSHORT(font->info.data + font->info.hhea + 4) - ttSHORT(font->info.data + font->info.hhea + 6);
+
+   /* 
+      int ascent, descent, lineGap;
+      stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
+   */
+
 
    #ifndef RFONT_NO_GRAPHICS
    font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
@@ -502,9 +519,7 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    if (RFont_decode_utf8(&utf8state, &codepoint, (u8)ch) != RFONT_UTF8_ACCEPT)
       return (RFont_glyph){0, 0};
-   
-   i32 w, h;
-   
+
 	u32 i;
    for (i = 0; i < font->glyph_len; i++)
       if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
@@ -512,111 +527,93 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    font->glyph_len++;
 
-   float scale = (float)size / font->fheight;
-
    font->glyphs[i].src = stbtt_FindGlyphIndex(&font->info, codepoint);
 
    if (font->glyphs[i].src == 0)
       return (RFont_glyph){0, 0};
-   
-   stbtt_GetGlyphBox(&font->info, font->glyphs[i].src, &font->glyphs[i].x0, &font->glyphs[i].y0, &font->glyphs[i].x1, &font->glyphs[i].y1);
 
-   #ifndef RFONT_EXTERNAL_STB
-   u8* bitmap =  stbtt_GetGlyphBitmapSubpixelBox(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs[i].src, 
-                                                   font->glyphs[i].x0, font->glyphs[i].y0, font->glyphs[i].x1, font->glyphs[i].y1, &w, &h, 0, 0);
-   #else
+   i32 x0, y0, x1, y1, w, h;
+   if (stbtt_GetGlyphBox(&font->info, font->glyphs[i].src, &x0, &y0, &x1, &y1) == 0)
+      return (RFont_glyph){0, 0};
+   
+   float scale = (float)size / font->fheight;
+
    u8* bitmap =  stbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, font->glyphs[i].src, &w, &h, 0, 0);
-   #endif
+
+   font->glyphs[i].w = (float)w;
+   font->glyphs[i].h = (float)h;
 
    font->glyphs[i].codepoint = codepoint;
-   font->glyphs[i].x = font->atlasX;
-   font->glyphs[i].x2 = font->atlasX + w;
-   font->glyphs[i].h = h;
    font->glyphs[i].size = size;
+   font->glyphs[i].x = font->atlasX;
+   font->glyphs[i].x2 = font->atlasX + font->glyphs[i].w;
+   font->glyphs[i].y1 = floor(-y1 * scale);
 
    #ifndef RFONT_NO_GRAPHICS
-   RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, w, h);
+   RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, font->glyphs[i].w, font->glyphs[i].h);
    #endif
 
-   font->atlasX += w;
+   font->atlasX += font->glyphs[i].w;
 
    free(bitmap);
 
+   i32 advanceX;
    u16 numOfLongHorMetrics = ttUSHORT(font->info.data + font->info.hhea + 34);
 
-   if (codepoint < numOfLongHorMetrics) {
-      font->glyphs[i].advance = ttSHORT(font->info.data + font->info.hmtx + 4*codepoint);
-      font->glyphs[i].left = ttSHORT(font->info.data + font->info.hmtx + 4*codepoint + 2);
-   } else {
-      font->glyphs[i].advance = ttSHORT(font->info.data + font->info.hmtx + 4*(numOfLongHorMetrics-1));
-      font->glyphs[i].left = ttSHORT(font->info.data + font->info.hmtx + 4*numOfLongHorMetrics + 2*(codepoint- numOfLongHorMetrics));
-   }
+   if (font->glyphs[i].src < numOfLongHorMetrics)
+      advanceX = ttSHORT(font->info.data + font->info.hmtx + 4 * font->glyphs[i].src);
+   else
+      advanceX = ttSHORT(font->info.data + font->info.hmtx + 4 * (numOfLongHorMetrics - 1));
+
+   font->glyphs[i].advance = advanceX * scale;
 
    return font->glyphs[i];
 }
 
 size_t RFont_text_width(RFont_font* font, const char* text, u32 size) {
-   return RFont_text_width_len(font, text, 0, size);
+   return RFont_text_width_len(font, text, 0, size, 0.0f);
 }
 
-size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size) {
-	u32 codepoint, utf8state = 0;
-	int glyph, prevGlyph;
+size_t RFont_text_width_spacing(RFont_font* font, const char* text, float spacing, u32 size) {
+   return RFont_text_width_len(font, text, 0, size, spacing);
+}
 
-   int x = 0, x0, x1, y0, y1;
-   int width = 0;
+size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, float spacing) {
+   float x;
+
    char* str;
-
-   for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {
-      if (RFont_decode_utf8(&utf8state, &codepoint, *(const u8*)str) != RFONT_UTF8_ACCEPT)
-         continue;
-
-      const u8 i = codepoint - ' ';
-      
-      if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size) {
-         glyph = font->glyphs[i].src;
-         x0 = font->glyphs[i].x0;
-         x1 = font->glyphs[i].x1;
-         y0 = font->glyphs[i].y0;
-         y1 = font->glyphs[i].y1;
-      }
-      else  {
-         glyph = stbtt_FindGlyphIndex(&font->info, codepoint);
-         if (glyph == 0)
-            continue;
-         stbtt_GetGlyphBox(&font->info, glyph, &x0, &y0, &x1, &y1);
-      }
-
+   int prevGlyph = 0;
+   
+   for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {        
       if (*str == '\n') { 
-         if (x > width)
-            width = x;
-         
          x = 0;
          continue;
       }
-
-      float scale = (float)size / font->fheight;
-
-		int ix0 = floor(x0 * scale);
-
-		int w = (ceil(x1 * scale) - ix0);
-
-      x += ix0;
-   
-      if (prevGlyph) {
-         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph) * scale;
-         x += (adv + 0.5f);
+      
+      if (*str == ' ' || *str == '\t') {
+         x += (size / 4);
+         continue;
       }
 
-      prevGlyph = glyph;
+      RFont_glyph glyph = RFont_font_add_char(font,  *str, size);
 
-      x += w;
+      if (glyph.codepoint == 0 && glyph.size == 0)
+         continue;
+      
+      if (glyph.advance == 0)
+         x += glyph.w + spacing;
+      else
+         x += (float)glyph.advance + spacing;
+
+      if (prevGlyph) {
+         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src);
+         x += (adv + spacing + 0.5f);
+      }
+
+      prevGlyph = glyph.src;
    }
 
-   if (x > width)
-      width = x;
-
-   return width;
+   return x;
 }
 
 void RFont_draw_text(RFont_font* font, const char* text, float x, float y, u32 size) {
@@ -640,8 +637,6 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
 
    int prevGlyph = 0;
 
-   float w = 0;
-   
    for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {        
       if (*str == '\n') { 
          x = startX;
@@ -654,32 +649,12 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
          continue;
       }
 
-      float scale = (float)size / font->fheight;
-
-      /* 
-      I would like to use this method, 
-      it makes it so I only have to load each glyph once 
-      instead of once per size
-      however, it has some issues so I've decided not to use it for now
-
-      RFont_glyph glyph = RFont_font_add_char(font, codepoint, RFONT_ATLAS_HEIGHT);
-      */
-
       RFont_glyph glyph = RFont_font_add_char(font,  *str, size);
 
       if (glyph.codepoint == 0 && glyph.size == 0)
          continue;
 
-      float ix0 = floor(glyph.x0 * scale);
-      float ix1 = ceil(glyph.x1 * scale);
-
-      float iy0 = floor(-glyph.y1 * scale + 0);
-      float iy1 = ceil(-glyph.y0 * scale + 0);
-
-      w = (ix1 - ix0);
-      float h = (iy1 - iy0);
-
-      float realY = y + iy0;
+      float realY = y + glyph.y1;
 
       switch (*str) {
          case '(':
@@ -690,39 +665,25 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
          default: break;
       }
 
-      x += ix0;
-
-      float adv = 0;
-
-      if (prevGlyph) {
-         adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src);
-         x += (adv * scale + spacing + 0.5f);
-      }
-
-      if (adv == 0)
-         x += (float)w * scale + spacing;
-
-      prevGlyph = glyph.src;
-
       verts[i] = RFONT_GET_WORLD_X((i32)x, RFont_width); 
       verts[i + 1] = RFONT_GET_WORLD_Y(realY, RFont_height);
       /*  */
       verts[i + 2] = RFONT_GET_WORLD_X((i32)x, RFont_width);
-      verts[i + 3] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+      verts[i + 3] = RFONT_GET_WORLD_Y(realY + glyph.h, RFont_height);
       /*  */
-      verts[i + 4] = RFONT_GET_WORLD_X((i32)(x + w), RFont_width);
-      verts[i + 5] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+      verts[i + 4] = RFONT_GET_WORLD_X((i32)(x + glyph.w), RFont_width);
+      verts[i + 5] = RFONT_GET_WORLD_Y(realY + glyph.h, RFont_height);
       /*  */
       /*  */
-      verts[i + 6] = RFONT_GET_WORLD_X((i32)(x + w), RFont_width);
+      verts[i + 6] = RFONT_GET_WORLD_X((i32)(x + glyph.w), RFont_width);
       verts[i + 7] = RFONT_GET_WORLD_Y(realY, RFont_height);
       /*  */
       verts[i + 8] = RFONT_GET_WORLD_X((i32)x, RFont_width); 
       verts[i + 9] = RFONT_GET_WORLD_Y(realY, RFont_height);
       /*  */
 
-      verts[i + 10] = RFONT_GET_WORLD_X((i32)(x + w), RFont_width);
-      verts[i + 11] = RFONT_GET_WORLD_Y(realY + h, RFont_height);
+      verts[i + 10] = RFONT_GET_WORLD_X((i32)(x + glyph.w), RFont_width);
+      verts[i + 11] = RFONT_GET_WORLD_Y(realY + glyph.h, RFont_height);
 
       /* texture coords */
 
@@ -749,7 +710,18 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
       tcoords[i + 11] = RFONT_GET_TEXPOSY(glyph.h);
 
       i += 12;
-      x += w + (w * scale + (float)(spacing));
+      
+      if (glyph.advance == 0)
+         x += (float)glyph.w + spacing;
+      else 
+         x += glyph.advance + spacing;
+
+      if (prevGlyph) {
+         float adv = stbtt_GetGlyphKernAdvance(&font->info, prevGlyph, glyph.src);
+         x += (adv + spacing + 0.5f);
+      }
+
+      prevGlyph = glyph.src;
    }
    
    #ifndef RFONT_NO_GRAPHICS
@@ -1228,8 +1200,6 @@ extern "C" {
 #endif
 
 STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **vertices);
-
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int *width, int *height, int *xoff, int *yoff);
 
 // @TODO: don't expose this structure
 typedef struct
@@ -3278,15 +3248,25 @@ STBTT_DEF void stbtt_Rasterize(stbtt__bitmap *result, float flatness_in_pixels, 
    }
 }
 
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int *width, int *height, int *xoff, int *yoff)
+STBTT_DEF void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y,float shift_x, float shift_y, int *ix0, int *iy0, int *ix1, int *iy1)
 {
-   int x0, x1, y0, y1;
-   stbtt_GetGlyphBox(info, glyph, &x0, &y0, &x1, &y1);
-   return stbtt_GetGlyphBitmapSubpixelBox(info, scale_x, scale_y, shift_x, shift_y, glyph, x0, y0, x1, y1, width, height, xoff, yoff);
+   int x0=0,y0=0,x1,y1; // =0 suppresses compiler warning
+   if (!stbtt_GetGlyphBox(font, glyph, &x0,&y0,&x1,&y1)) {
+      // e.g. space character
+      if (ix0) *ix0 = 0;
+      if (iy0) *iy0 = 0;
+      if (ix1) *ix1 = 0;
+      if (iy1) *iy1 = 0;
+   } else {
+      // move to integral bboxes (treating pixels as little squares, what pixels get touched)?
+      if (ix0) *ix0 = floor( x0 * scale_x + shift_x);
+      if (iy0) *iy0 = floor(-y1 * scale_y + shift_y);
+      if (ix1) *ix1 = ceil ( x1 * scale_x + shift_x);
+      if (iy1) *iy1 = ceil (-y0 * scale_y + shift_y);
+   }
 }
 
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixelBox(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int x0, int y0, int x1, int y1, 
-                                                            int *width, int *height, int *xoff, int *yoff)
+STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int glyph, int *width, int *height, int *xoff, int *yoff)
 {
    int ix0,iy0,ix1,iy1;
    stbtt__bitmap gbm;
@@ -3302,11 +3282,7 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixelBox(const stbtt_fontinfo *i
       scale_y = scale_x;
    }
 
-   // move to integral bboxes (treating pixels as little squares, what pixels get touched)?
-   ix0 = floor( x0 * scale_x + shift_x);
-   iy0 = floor(-y1 * scale_y + shift_y);
-   ix1 = ceil ( x1 * scale_x + shift_x);
-   iy1 = ceil (-y0 * scale_y + shift_y);
+   stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale_x, scale_y, shift_x, shift_y, &ix0,&iy0,&ix1,&iy1);
 
    // now we get the size
    gbm.w = (ix1 - ix0);
