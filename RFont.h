@@ -128,6 +128,10 @@ you want to change anything
    #define RFONT_TEXTFORMAT_MAX_SIZE 923
 #endif
 
+#ifndef RFONT_VSNPRINTF
+#define RFONT_VSNPRINTF vsnprintf
+#endif
+
 /* make sure RFont declares aren't declared twice */
 #ifndef RFONT_H
 #define RFONT_H
@@ -388,8 +392,8 @@ const char* RFont_fmt(const char* string, ...) {
 
    va_list args;
    va_start(args, string);
-
-   vsprintf(output, string, args);
+   
+   RFONT_VSNPRINTF(output, RFONT_TEXTFORMAT_MAX_SIZE, string, args);
    va_end(args);
 
    return output;
