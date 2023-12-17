@@ -26,6 +26,8 @@ gl:
 	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
 rlgl:
 	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl
+rgl:
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rgl
 gl3:
 	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3
 
