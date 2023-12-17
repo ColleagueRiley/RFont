@@ -19,6 +19,9 @@ The library is designed to be lightweight while also supporting the ablitiy to a
 # Documentation 
 For documentation read the `RFont.h` file and check out the example in `./example`
 
+# todo
+    - backup font system for when a character is not supported by the main font
+
 # Credits
 
 # stb_truetype
