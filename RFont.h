@@ -531,9 +531,6 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    glyph->src = stbtt_FindGlyphIndex(&font->info, codepoint);
 
-   if (glyph->src == 0)
-      return (RFont_glyph){0, 0};
-
    i32 x0, y0, x1, y1, w, h;
    if (stbtt_GetGlyphBox(&font->info, glyph->src, &x0, &y0, &x1, &y1) == 0)
       return (RFont_glyph){0, 0};
@@ -639,7 +636,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
          continue;
       }
 
-      RFont_glyph glyph = RFont_font_add_char(font,  *str, size);
+      RFont_glyph glyph = RFont_font_add_char(font, *str, size);
 
       if (glyph.codepoint == 0 && glyph.size == 0)
          continue;
@@ -704,7 +701,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
 
       x += glyph.advance + spacing;
    }
-   
+
    #ifndef RFONT_NO_GRAPHICS
    RFont_render_text(font->atlas, verts, tcoords, i / 2);
    #endif
