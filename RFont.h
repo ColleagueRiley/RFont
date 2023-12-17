@@ -669,7 +669,7 @@ void RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float x
       }
 
       RFont_glyph glyph = RFont_font_add_char(font, *str, size);
-      printf("h\n");
+
       if (glyph.codepoint == 0 && glyph.size == 0)
          continue;
 
