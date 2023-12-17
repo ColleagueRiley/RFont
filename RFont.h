@@ -833,40 +833,40 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, float x, float y, float w, flo
 #ifdef RFONT_RENDER_RLGL
 
 void RFont_render_set_color(float r, float g, float b, float a) {
-   rglColor4f(r, g, b, a);
+   rlColor4f(r, g, b, a);
 }
 
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glEnable(GL_TEXTURE_2D);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
    
-   rglMatrixMode(RGL_MODELVIEW);
-   rglLoadIdentity();
+   rlMatrixMode(RL_MODELVIEW);
+   rlLoadIdentity();
    glDisable(GL_DEPTH_TEST);
    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_CULL_FACE);
 
-	rglSetTexture(atlas);
+	rlSetTexture(atlas);
 
 	glEnable(GL_BLEND);
 
-	rglPushMatrix();
+	rlPushMatrix();
 
-	rglBegin(GL_QUADS);
+	rlBegin(GL_QUADS);
 
 	i32 i, j = 0;
 	for (i = 0; (size_t)i < (nverts * 6); i += 2) {
-		rglTexCoord2f(tcoords[i], tcoords[i + 1]);
+		rlTexCoord2f(tcoords[i], tcoords[i + 1]);
 
 		if (j++ && j == 2 && (j -= 3))
-			rglVertex2f(verts[i], verts[i + 1]);
+			rlVertex2f(verts[i], verts[i + 1]);
 
-		rglVertex2f(verts[i], verts[i + 1]);
+		rlVertex2f(verts[i], verts[i + 1]);
 	}
-	rglEnd();
-	rglPopMatrix();
+	rlEnd();
+	rlPopMatrix();
 
-	rglSetTexture(0);
+	rlSetTexture(0);
    glEnable(GL_DEPTH_TEST);
 }
 
