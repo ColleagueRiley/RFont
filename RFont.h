@@ -124,6 +124,10 @@ you want to change anything
 #define RFONT_INIT_VERTS 1024
 #endif
 
+#ifndef RFONT_TEXTFORMAT_MAX_SIZE
+   #define RFONT_TEXTFORMAT_MAX_SIZE 923
+#endif
+
 /* make sure RFont declares aren't declared twice */
 #ifndef RFONT_H
 #define RFONT_H
@@ -189,6 +193,16 @@ inline void RFont_font_free(RFont_font* font);
  * @return The `RFont_glyph` created from the data and added to the atlas.
 */
 inline RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size);
+
+#ifndef RFONT_NO_FMT
+/**
+ * @brief Formats a string.
+ * @param string The source string
+ * @param ... format data
+ * @return The formatted string 
+*/
+inline const char* RFont_fmt(const char* string, ...);
+#endif
 
 /**
  * @brief Add a string to the font's atlas.
@@ -366,12 +380,26 @@ END of stb defines required by RFont
 you probably care about this part 
 */
 
+#ifndef RFONT_NO_FMT
+#include <stdarg.h>
+
+const char* RFont_fmt(const char* string, ...) {
+   static char output[RFONT_TEXTFORMAT_MAX_SIZE];
+
+   va_list args;
+   va_start(args, string);
+
+   vsprintf(output, string, args);
+   va_end(args);
+
+   return output;
+}
+#endif
+
 struct RFont_font {
    stbtt_fontinfo info; /* source stb font */
    b8 free_font_memory;
    float fheight; /* font height from stb */
-
-   int* lut;
 
    RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
    size_t glyph_len;
