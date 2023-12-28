@@ -25,12 +25,6 @@
 
 #include <stdbool.h>
 
-struct timeval GetTimeStamp() {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    return tv;
-}
-
 int main(int argc, char **argv) {
     RGFW_setGLVersion(3, 3);
 
@@ -77,7 +71,7 @@ int main(int argc, char **argv) {
         RFont_draw_text(font, "RFont_draw_text(); ⌫§", 0, 240, 60);
         RFont_set_color(1.0f, 0.0f, 0, 1.0f);
         RFont_draw_text(japanese, "テキスト例", 0, 300, 60);
-        
+
         #if defined(RFONT_RENDER_RGL)
         rglRenderBatch();      // Update and draw internal render batch
         #endif
