@@ -896,6 +896,8 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 
    rglMatrixMode(GL_MODELVIEW);
    rglLoadIdentity();
+	rglPushMatrix();
+
    glDisable(GL_DEPTH_TEST);
    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_CULL_FACE);    
@@ -903,8 +905,6 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glEnable(GL_BLEND);
    glEnable(GL_TEXTURE_2D);
    glBindTexture(GL_TEXTURE_2D, atlas);
-
-	rglPushMatrix();
 
 	rglBegin(GL_TRIANGLES);
 
@@ -1113,10 +1113,9 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glEnable(GL_CULL_FACE);    
 
    glEnable(GL_BLEND);
+   glShadeModel(GL_SMOOTH);
 
    if (RFont_gl.legacy) {
-      glShadeModel(GL_SMOOTH);
-   
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
       glBindTexture(GL_TEXTURE_2D, atlas);
