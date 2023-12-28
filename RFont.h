@@ -761,16 +761,16 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
    return x;
 }
 
-#if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
-
-#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
-#define GL_GLEXT_PROTOTYPES
-#endif
-
 #ifndef __APPLE__
 #include <GL/gl.h>
 #else
 #include <OpenGL/gl.h>
+#endif
+
+#if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
+
+#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
+#define GL_GLEXT_PROTOTYPES
 #endif
 
 #ifndef GL_PERSPECTIVE_CORRECTION_HINT
