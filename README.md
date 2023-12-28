@@ -14,7 +14,7 @@ The library is designed to be lightweight while also supporting the ablitiy to a
 
 - OpenGL Legacy 
 - Modern OpenGL (opengl 3.3 +)
-- RLGL (OPENGL version abstraction layer)
+- RGL (OPENGL version abstraction layer)
 
 # Documentation 
 For documentation read the `RFont.h` file and check out the example in `./example`

@@ -20,27 +20,25 @@ endif
 all:
 	make gl
 	make gl3
-	make rlgl
+	make rgl
 
 gl:
 	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
-rlgl:
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl
 rgl:
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rgl
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl
 gl3:
 	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3
 
 clean:
-	rm gl3 gl rlgl -f
+	rm gl3 gl rgl -f
 
 debug:
 	make clean
 
 	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RLGL -Wall -o rlgl -D RFONT_DEBUG
+	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
 	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
-	./gl gl &
-	./gl3 gl3 &
-	./rlgl rlgl &
+	./gl gl
+	./gl3 gl3
+	./rgl rgl

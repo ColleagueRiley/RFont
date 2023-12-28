@@ -33,8 +33,8 @@ is in at least one of your files or arguments
 #define RFONT_NO_STDIO - do not include stdio.h
 #define RFONT_EXTERNAL_STB - load stb_truetype from stb_truetype.h instead of using the internal version
 #define RFONT_NO_GRAPHICS - do not include any graphics functions at all
-#define RFONT_RENDER_RLGL - use rlgl functions for rendering
-#define RFONT_RENDER_LEGACY - use opengl legacy functions for rendering (if rlgl is not chosen)
+#define RFONT_RENDER_RGL - use RGL functions for rendering
+#define RFONT_RENDER_LEGACY - use opengl legacy functions for rendering (if RGL is not chosen)
 -- NOTE: By default, opengl 3.3 vbos are used for rendering --
 */
 
@@ -727,7 +727,7 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
 
       /* texture coords */
 
-      //#if defined(RFONT_RENDER_LEGACY) || defined(RFONT_RENDER_RLGL)
+      //#if defined(RFONT_RENDER_LEGACY) || defined(RFONT_RENDER_RGL)
       tcoords[i] = RFONT_GET_TEXPOSX(glyph.x);
       tcoords[i + 1] = 0;
       //#endif
@@ -763,7 +763,7 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
 
 #if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
 
-#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)
+#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
 #define GL_GLEXT_PROTOTYPES
 #endif
 
@@ -817,6 +817,8 @@ void RFont_opengl_getError() {
 }
 
 #endif
+
+GLAPI void APIENTRY glDebugMessageCallback (GLDEBUGPROC callback, const void *userParam);
 
 u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
     #if defined(RFONT_DEBUG) && !defined(RFONT_RENDER_LEGACY)
@@ -881,52 +883,50 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, float x, float y, float w, flo
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-#ifdef RFONT_RENDER_RLGL
+#ifdef RFONT_RENDER_RGL
 
 void RFont_render_set_color(float r, float g, float b, float a) {
-   rlColor4f(r, g, b, a);
+   rglColor4f(r, g, b, a);
 }
 
 void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glEnable(GL_TEXTURE_2D);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-   
-   rlMatrixMode(RL_MODELVIEW);
-   rlLoadIdentity();
+   glShadeModel(GL_SMOOTH);
+
+   rglMatrixMode(GL_MODELVIEW);
+   rglLoadIdentity();
    glDisable(GL_DEPTH_TEST);
    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-   glEnable(GL_CULL_FACE);
+   glEnable(GL_CULL_FACE);    
 
-	rlSetTexture(atlas);
+   glEnable(GL_BLEND);
+   glEnable(GL_TEXTURE_2D);
+   glBindTexture(GL_TEXTURE_2D, atlas);
 
-	glEnable(GL_BLEND);
+	rglPushMatrix();
 
-	rlPushMatrix();
+	rglBegin(GL_TRIANGLES);
 
-	rlBegin(GL_QUADS);
-
-	i32 i, j = 0;
-	for (i = 0; (size_t)i < (nverts * 6); i += 2) {
-		rlTexCoord2f(tcoords[i], tcoords[i + 1]);
-
-		if (j++ && j == 2 && (j -= 3))
-			rlVertex2f(verts[i], verts[i + 1]);
-
-		rlVertex2f(verts[i], verts[i + 1]);
+	size_t i;
+	for (i = 0; i < (nverts * 2); i += 2) {
+		rglTexCoord2f(tcoords[i], tcoords[i + 1]);
+		
+      rglVertex2f(verts[i], verts[i + 1]);
 	}
-	rlEnd();
-	rlPopMatrix();
+	rglEnd();
+	rglPopMatrix();
 
-	rlSetTexture(0);
+   glBindTexture(GL_TEXTURE_2D, 0);
    glEnable(GL_DEPTH_TEST);
 }
 
 void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
 void RFont_render_legacy(u8 legacy) { }
 void RFont_render_init() {}
-#endif /* RFONT_RENDER_RLGL */
+#endif /* RFONT_RENDER_RGL */
 
-#if defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)
+#if defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
 
 void RFont_render_set_color(float r, float g, float b, float a) {
    glColor4f(r, g, b, a);
@@ -967,9 +967,9 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
 void RFont_render_legacy(u8 legacy) { }
 void RFont_render_init() {}
-#endif /* defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)  */
+#endif /* defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)  */
 
-#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL)
+#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
 typedef struct {
    GLuint vao, vbo, tbo, cbo, ebo,
             program, vShader, fShader;
@@ -1215,9 +1215,9 @@ void RFont_render_free(u32 atlas) {
    glDeleteProgram(RFont_gl.program);
 }
 
-void RFont_render_legacy(u8 legacy) { RFont_gl.legacy = true; }
+void RFont_render_legacy(u8 legacy) { RFont_gl.legacy = legacy; }
 
-#endif /* !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RLGL) */
+#endif /* !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL) */
 #endif /*  !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS) */
 
 /* 
