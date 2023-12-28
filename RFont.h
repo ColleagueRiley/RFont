@@ -818,9 +818,6 @@ void RFont_opengl_getError() {
 
 #endif
 
-typedef void (APIENTRY  *GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
-void APIENTRY glDebugMessageCallback (GLDEBUGPROC callback, const void *userParam);
-
 u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
     #if defined(RFONT_DEBUG) && !defined(RFONT_RENDER_LEGACY)
     glEnable(GL_DEBUG_OUTPUT);
