@@ -4,7 +4,7 @@
 #define RGL_IMPLEMENTATION
 
 #ifdef RFONT_RENDER_LEGACY
-#define GRAPHICS_API_OPENGL_11
+#define RGL_OPENGL_LEGACY
 #endif
 
 #ifdef RFONT_RENDER_RGL
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
         RFont_draw_text(font, "RFont_draw_text(); ⌫§", 0, 240, 60);
         RFont_set_color(1.0f, 0.0f, 0, 1.0f);
         RFont_draw_text(japanese, "テキスト例", 0, 300, 60);
-
+        
         #if defined(RFONT_RENDER_RGL)
         rglRenderBatch();      // Update and draw internal render batch
         #endif

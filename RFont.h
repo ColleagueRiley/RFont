@@ -914,7 +914,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    glEnable(GL_TEXTURE_2D);
    rglSetTexture(atlas);
 
-	rglBegin(GL_TRIANGLES);
+	rglBegin(RGL_TRIANGLES_2D);
 
 	size_t i;
 	for (i = 0; i < (nverts * 2); i += 2) {
@@ -930,7 +930,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 }
 
 void RFont_render_free(u32 atlas) { glDeleteTextures(1, &atlas); }
-void RFont_render_legacy(u8 legacy) { }
+void RFont_render_legacy(u8 legacy) { rglLegacy(legacy); }
 void RFont_render_init() {}
 #endif /* RFONT_RENDER_RGL */
 

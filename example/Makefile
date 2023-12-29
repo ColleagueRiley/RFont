@@ -1,7 +1,5 @@
 CC = gcc
 
-OPENGL = -L"/home/manjaro/Games/Heroic/Prefixes/default/Sonic Mania/pfx/drive_c/windows/syswow64/"
-
 LIBS := -lshell32 -lgdi32 -lm -lopengl32 --static
 EXT = .exe
 
