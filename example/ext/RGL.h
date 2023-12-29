@@ -678,7 +678,7 @@ void rglInit(int width, i32 height, void *loader) {
     RGLinfo.elementCount = RGL_MAX_BUFFER_ELEMENTS;
 
     RGLinfo.vertices = (float *)RGL_MALLOC(RGL_MAX_BUFFER_ELEMENTS * 3 * 4 * sizeof(float) * RGL_MAX_BATCHES);
-    RGLinfo.tcoords = (float *)RGL_MALLOC(RGL_MAX_BUFFER_ELEMENTS * 2 * 4 * sizeof(float) * RGL_MAX_BATCHES);
+    RGLinfo.tcoords = (float*)RGL_MALLOC(RGL_MAX_BUFFER_ELEMENTS * 2 * 4 * sizeof(float) * RGL_MAX_BATCHES);
     RGLinfo.colors = (float*)RGL_MALLOC(RGL_MAX_BUFFER_ELEMENTS * 4 * 4 * sizeof(float) * RGL_MAX_BATCHES);
     RGLinfo.indices = (u16*)RGL_MALLOC(RGL_MAX_BUFFER_ELEMENTS * 6 * sizeof(u16) * RGL_MAX_BATCHES);
 
@@ -980,24 +980,18 @@ void rglLegacy(u8 state) {
 
 #if defined(RGL_MODERN_OPENGL)
 
-/* Check internal buffer overflow for a given number of vertex */
-/* and force a void draw call if required */
 int rglCheckRenderBatchLimit(int vCount) {
-    if (RGLinfo.legacy)
-        return 0;
-
-    if ((RGLinfo.vertexCounter + vCount) < (RGLinfo.elementCount*4))
+    if (RGLinfo.legacy || (RGLinfo.vertexCounter + vCount) < (RGLinfo.elementCount * 4))
         return 0;
 
     /* Store current primitive drawing mode and texture id */
     i32 currentMode = RGLinfo.batches[RGLinfo.drawCounter - 1].mode;
-
-    rglRenderBatch();    /* NOTE: Stereo rendering is checked inside */
+    
+    rglRenderBatch();
 
     /* Restore state of last batch so we can continue adding vertices */
     RGLinfo.batches[RGLinfo.drawCounter - 1].mode = currentMode;
     RGLinfo.batches[RGLinfo.drawCounter - 1].tex = RGLinfo.tex;
-    
     return 1; 
 }
 
@@ -1091,13 +1085,13 @@ void rglVertex3f(float x, float y, float z) {
     }
 
     if (RGLinfo.vertexCounter > (RGLinfo.elementCount * 4 - 4)) {
-        if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES) &&
+        if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES_2D) &&
             (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%2 == 0))
                 rglCheckRenderBatchLimit(2 + 1);
-        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES) &&
+        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES_2D) &&
             (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%3 == 0))
                 rglCheckRenderBatchLimit(3 + 1);
-        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS) &&
+        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS_2D) &&
             (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%4 == 0))
                 rglCheckRenderBatchLimit(4 + 1);
     }
