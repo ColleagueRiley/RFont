@@ -312,7 +312,7 @@ typedef void (*glUniformMatrix4fvPROC)(GLint location, GLsizei count, GLboolean 
 typedef void (*glTexImage2DPROC)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
 typedef void (*glActiveTexturePROC) (GLenum texture);
 typedef void (*glDebugMessageCallbackPROC)(void* callback, const void*);
-typedef void (APIENTRY *glDebugMessageCallbackPROC)(void* callback, const void*);
+typedef void (*glDebugMessageCallbackPROC)(void* callback, const void*);
 
 glShaderSourcePROC glShaderSourceSRC = NULL;
 glCreateShaderPROC glCreateShaderSRC = NULL;
