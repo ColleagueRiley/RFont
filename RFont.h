@@ -789,10 +789,10 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
 #define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
 #define GL_COMPILE_STATUS                 0x8B81
 #define GL_LINK_STATUS                    0x8B82
-#define GL_INFO_LOG_LENGTH                0x8B84
+#define GL_INFO_LOG_LENGTH                0x8B84 
 #endif
 
-void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam) {
     if (type != GL_DEBUG_TYPE_ERROR)
         return;
 
