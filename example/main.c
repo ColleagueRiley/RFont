@@ -7,6 +7,7 @@
 #define GRAPHICS_API_OPENGL_11
 #endif
 
+#define RFONT_DEBUG
 
 #ifdef RFONT_RENDER_RGL
 #include "RGL.h"
@@ -36,7 +37,7 @@ int main(int argc, char **argv) {
 
     #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
     if (RGL_loadGL3((RGLloadfunc)RGFW_getProcAddress)) {
-        printf("Failed to load OpenGL, defaulting to OpenGL 2");
+        printf("Failed to load OpenGL, defaulting to OpenGL 2\n");
         RFont_render_legacy(true);
     }
     #endif

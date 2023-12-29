@@ -311,6 +311,7 @@ typedef GLint (*glGetUniformLocationPROC)(GLuint program, const GLchar *name);
 typedef void (*glUniformMatrix4fvPROC)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 typedef void (*glTexImage2DPROC)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
 typedef void (*glActiveTexturePROC) (GLenum texture);
+typedef void (APIENTRY *glDebugMessageCallbackPROC)(void* callback, const void*);
 
 glShaderSourcePROC glShaderSourceSRC = NULL;
 glCreateShaderPROC glCreateShaderSRC = NULL;
@@ -341,6 +342,7 @@ glBindVertexArrayPROC glBindVertexArraySRC = NULL;
 glGetUniformLocationPROC glGetUniformLocationSRC = NULL;
 glUniformMatrix4fvPROC glUniformMatrix4fvSRC = NULL;
 glActiveTexturePROC glActiveTextureSRC = NULL;
+glDebugMessageCallbackPROC glDebugMessageCallbackSRC = NULL;
 
 #define glActiveTexture glActiveTextureSRC
 #define glShaderSource glShaderSourceSRC
@@ -371,6 +373,7 @@ glActiveTexturePROC glActiveTextureSRC = NULL;
 #define glBindVertexArray glBindVertexArraySRC
 #define glGetUniformLocation glGetUniformLocationSRC
 #define glUniformMatrix4fv glUniformMatrix4fvSRC
+#define glDebugMessageCallback glDebugMessageCallbackSRC
 
 extern int RGL_loadGL3(RGLloadfunc proc);
 
@@ -542,7 +545,7 @@ void RGL_opengl_getError() {
 #endif
 
 void RGL_debug_shader(u32 src, const char *shader, const char *action) {
-	GLint status;
+    GLint status;
 	if (action[0] == 'l')
 		glGetProgramiv(src, GL_LINK_STATUS, &status);
 	else
@@ -1291,6 +1294,7 @@ int RGL_loadGL3(RGLloadfunc proc) {
     RGL_PROC_DEF(proc, glGetUniformLocation);
     RGL_PROC_DEF(proc, glUniformMatrix4fv);
     RGL_PROC_DEF(proc, glActiveTexture);
+    RGL_PROC_DEF(proc, glDebugMessageCallback);
 
     if (
         glShaderSourceSRC == NULL ||
@@ -1320,9 +1324,18 @@ int RGL_loadGL3(RGLloadfunc proc) {
         glGenBuffersSRC == NULL ||
         glBindVertexArraySRC == NULL ||
         glGetUniformLocationSRC == NULL ||
-        glUniformMatrix4fvSRC == NULL
+        glUniformMatrix4fvSRC == NULL ||
+        glDebugMessageCallbackSRC == NULL
     )
         return 1;
+
+    size_t vao;
+    glGenVertexArraysSRC(1, &vao);
+    
+    if (vao == 0)
+        return 1;
+    
+    glDeleteVertexArraysSRC(1, &vao);
     
     return 0;
 }

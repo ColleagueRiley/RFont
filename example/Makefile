@@ -1,20 +1,33 @@
-ifeq '$(findstring ;,$(PATH))' ';'
+CC = gcc
+
+OPENGL = -L"/home/manjaro/Games/Heroic/Prefixes/default/Sonic Mania/pfx/drive_c/windows/syswow64/"
+
+LIBS := -lshell32 -lgdi32 -lm -lopengl32 --static
+EXT = .exe
+
+ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
     detected_OS := Windows
 else
-    detected_OS := $(shell uname 2>/dev/null || echo Unknown)
-    detected_OS := $(patsubst CYGWIN%,Cygwin,$(detected_OS))
-    detected_OS := $(patsubst MSYS%,MSYS,$(detected_OS))
-    detected_OS := $(patsubst MINGW%,MSYS,$(detected_OS))
+	ifeq '$(findstring ;,$(PATH))' ';'
+		detected_OS := Windows
+	else
+		detected_OS := $(shell uname 2>/dev/null || echo Unknown)
+		detected_OS := $(patsubst CYGWIN%,Cygwin,$(detected_OS))
+		detected_OS := $(patsubst MSYS%,MSYS,$(detected_OS))
+		detected_OS := $(patsubst MINGW%,MSYS,$(detected_OS))
+	endif
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBS := -lopengl32 -lshell32 -lgdi32 -lm
+	LIBS := -lshell32 -lgdi32 -lm -lopengl32 --static
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
 	LIBS := -I./ext/Silicon/ -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
+	EXT = 
 endif
 ifeq ($(detected_OS),Linux)
     LIBS := -I./include -lX11 -lGLX -lm -lGL
+	EXT =
 endif
 
 all:
@@ -23,22 +36,22 @@ all:
 	make rgl
 
 gl:
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
 rgl:
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl
 gl3:
-	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3
+	$(CC) main.c $(LIBS) -I./ext -I../ -Wall -o gl3
 
 clean:
-	rm gl3 gl rgl -f
+	rm gl3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so gl.exe.so rgl.exe.so -f
 
 debug:
 	make clean
 
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
-	gcc main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
-	gcc main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
+	$(CC) main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
-	./gl gl
-	./gl3 gl3
-	./rgl rgl
+	./gl$(EXT) gl
+	./gl3$(EXT) gl3
+	./rgl$(EXT) rgl

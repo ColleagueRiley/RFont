@@ -783,6 +783,15 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
 
 #ifdef RFONT_DEBUG
 
+#ifndef GL_DEBUG_TYPE_ERROR
+#define GL_DEBUG_TYPE_ERROR               0x824C
+#define GL_DEBUG_OUTPUT                   0x92E0
+#define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
+#define GL_COMPILE_STATUS                 0x8B81
+#define GL_LINK_STATUS                    0x8B82
+#define GL_INFO_LOG_LENGTH                0x8B84
+#endif
+
 void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     if (type != GL_DEBUG_TYPE_ERROR)
         return;
@@ -793,26 +802,27 @@ void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 void RFont_opengl_getError() {
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
-        switch (err) {
+         switch (err) {
             case GL_INVALID_ENUM:
-                printf("OpenGL error: GL_INVALID_ENUM\n");
-                break;
+                  printf("OpenGL error: GL_INVALID_ENUM\n");
+                  break;
             case GL_INVALID_VALUE:
-                printf("OpenGL error: GL_INVALID_VALUE\n");
-                break;
+                  printf("OpenGL error: GL_INVALID_VALUE\n");
+                  break;
             case GL_INVALID_OPERATION:
-                printf("OpenGL error: GL_INVALID_OPERATION\n");
-                break;
+                  printf("OpenGL error: GL_INVALID_OPERATION\n");
+                  break;
             case GL_STACK_OVERFLOW:
-                printf("OpenGL error: GL_STACK_OVERFLOW\n");
-                break;
+                  printf("OpenGL error: GL_STACK_OVERFLOW\n");
+                  break;
             case GL_STACK_UNDERFLOW:
-                printf("OpenGL error: GL_STACK_UNDERFLOW\n");
-                break;	
+                  printf("OpenGL error: GL_STACK_UNDERFLOW\n");
+                  break;	
             default:
-                printf("OpenGL error: Unknown error code 0x%x\n", err);
-                break;
-        }
+                  printf("OpenGL error: Unknown error code 0x%x\n", err);
+                  break;
+         }
+         exit(1);
     }
 }
 
@@ -1006,7 +1016,6 @@ void RFont_debug_shader(u32 src, const char* shader, const char* action) {
         }
         
         RFont_opengl_getError();
-        exit(1);
     }
 }
 #endif
@@ -1056,16 +1065,14 @@ void RFont_render_init() {
          FragColor = texture(texture0, fragTexCoord) * fragColor;
       }
    );
-
+   
    glGenVertexArrays(1, &RFont_gl.vao);
-
    glBindVertexArray(RFont_gl.vao);
 
    glGenBuffers(1, &RFont_gl.vbo);
    glGenBuffers(1, &RFont_gl.tbo);
    glGenBuffers(1, &RFont_gl.cbo);
    glGenBuffers(1, &RFont_gl.ebo);
-
    /* compile vertex shader */
    RFont_gl.vShader = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(RFont_gl.vShader, 1, &defaultVShaderCode, NULL);
