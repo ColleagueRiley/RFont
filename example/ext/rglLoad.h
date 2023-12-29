@@ -195,7 +195,7 @@ int RGL_loadGL3(RGLloadfunc proc) {
     )
         return 1;
 
-    size_t vao;
+    GLuint vao;
     glGenVertexArraysSRC(1, &vao);
     
     if (vao == 0) 

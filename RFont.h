@@ -888,7 +888,7 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, float x, float y, float w, flo
 
 	RFont_push_pixel_values(alignment, rowLength, skipPixels, skipRows);
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 #ifdef RFONT_RENDER_RGL
@@ -912,7 +912,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 
    glEnable(GL_BLEND);
    glEnable(GL_TEXTURE_2D);
-   glBindTexture(GL_TEXTURE_2D, atlas);
+   rglSetTexture(atlas);
 
 	rglBegin(GL_TRIANGLES);
 

@@ -7,8 +7,6 @@
 #define GRAPHICS_API_OPENGL_11
 #endif
 
-#define RFONT_DEBUG
-
 #ifdef RFONT_RENDER_RGL
 #include "RGL.h"
 #endif

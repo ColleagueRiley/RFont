@@ -586,7 +586,7 @@ void rglInit(int width, i32 height, void *loader) {
         printf("Failed to load an OpenGL 3.3 Context, reverting to OpenGL Legacy\n");
         #endif
 
-        RGLinfo.legacy = 1;   
+        RGLinfo.legacy = 2;   
         return;
     }
 
@@ -952,7 +952,8 @@ RGL_MATRIX rglMatrixScale(float x, float y, float z) {
 
 void rglLegacy(u8 state) {
     #if defined(RGL_MODERN_OPENGL)
-    RGLinfo.legacy = state;
+    if (state != 2)
+        RGLinfo.legacy = state;
     #endif
 }
 
@@ -1330,7 +1331,7 @@ int RGL_loadGL3(RGLloadfunc proc) {
     )
         return 1;
 
-    size_t vao;
+    GLuint vao;
     glGenVertexArraysSRC(1, &vao);
     
     if (vao == 0)
