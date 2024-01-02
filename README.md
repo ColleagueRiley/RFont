@@ -22,6 +22,11 @@ For documentation read the `RFont.h` file and check out the example in `./exampl
 # todo
     - backup font system for when a character is not supported by the main font
 
+# uses 
+
+[A Terminal emulator created using RFont by Noxomix](https://github.com/noxomix/vterm_test)\
+[RSGL (my GUI library)](https://github.com/ColleagueRiley/RSGL)
+
 # Credits
 
 # stb_truetype
