@@ -227,8 +227,10 @@ RGLDEF RGL_MATRIX rglMatrixScale(float x, float y, float z);
 /* render with legacy (or turn of legacy rendering if you turned it on) */
 RGLDEF void rglLegacy(u8 state);
 
+#ifdef RGL_DEBUG
 /* get opengl error */
 RGLDEF void rglGetError(void);
+#endif
 
 RGLDEF void rglBegin(int mode);
 
@@ -283,8 +285,6 @@ RGLDEF RGL_MATRIX rglMatrixIdentity(void);                       /* Get identity
 RGLDEF RGL_MATRIX rglMatrixMultiply(float left[16], float right[16]);  /* Multiply two matrices */
 
 RGLDEF i32 rglCheckRenderBatchLimit(int vCount);                             /* Check internal buffer overflow for a given number of vertex */
-
-#define RGL_PROC_DEF(proc, name) name##SRC = (name##PROC)proc(#name)
 
 typedef void (*RGLapiproc)(void);
 typedef RGLapiproc (*RGLloadfunc)(const char *name);
@@ -387,6 +387,106 @@ glDebugMessageCallbackPROC glDebugMessageCallbackSRC = NULL;
 extern int RGL_loadGL3(RGLloadfunc proc);
 
 #endif
+
+
+#ifdef RGL_CUSTOM_OPENGL
+typedef void (*glEnablePROC)(GLenum);
+typedef void (*glDisablePROC)(GLenum);
+typedef void (*glBindTexturePROC)(GLenum target, GLuint texture);
+typedef void (*glPixelStoreiPROC)(GLenum pname, GLint param);
+typedef void (*glGenTexturesPROC)(GLsizei n, GLuint* textures);
+typedef void (*glTexParameteriPROC)(GLenum target, GLenum pname, GLint param);
+typedef void (*glTexImage2DPROC)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void* pixels);
+typedef void (*glBeginPROC)(GLenum mode);
+typedef void (*glViewportPROC)(GLint x, GLint y, GLsizei width, GLsizei height);
+typedef void (*glMultMatrixfPROC)(const GLfloat* m);
+typedef GLenum (*glGetErrorPROC)();
+typedef const GLubyte* (*glGetStringPROC)(GLenum name);
+typedef void (*glColor4ubPROC)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+typedef void (*glMatrixModePROC)(GLenum mode);
+typedef void (*glLoadIdentityPROC)();
+typedef void (*glPushMatrixPROC)();
+typedef void (*glOrthoPROC)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near, GLdouble far);
+typedef void (*glRotatefPROC)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+typedef void (*glTranslatefPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (*glClearColorPROC)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+typedef void (*glClearPROC)(GLbitfield mask);
+typedef void (*glColor3fPROC)(GLfloat red, GLfloat green, GLfloat blue);
+typedef void (*glVertex2fPROC)(GLfloat x, GLfloat y);
+typedef void (*glEndPROC)();
+typedef void (*glTexCoord2fPROC)(GLfloat s, GLfloat t);
+typedef void (*glColor4fPROC)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+typedef void (*glVertex3fPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (*glPopMatrixPROC)();
+typedef void (*glDeleteTexturesPROC)(GLsizei n, const GLuint* textures);
+typedef void (*glDrawArraysPROC)(GLenum mode, GLint first, GLsizei count);
+
+glEnablePROC glEnableSRC = NULL;
+glDisablePROC glDisableSRC = NULL;
+glBindTexturePROC glBindTextureSRC = NULL;
+glPixelStoreiPROC glPixelStoreiSRC = NULL;
+glGenTexturesPROC glGenTexturesSRC = NULL;
+glTexParameteriPROC glTexParameteriSRC = NULL;
+glTexImage2DPROC glTexImage2DSRC = NULL;
+glBeginPROC glBeginSRC = NULL;
+glViewportPROC glViewportSRC = NULL;
+glMultMatrixfPROC glMultMatrixfSRC = NULL;
+glGetErrorPROC glGetErrorSRC = NULL;
+glGetStringPROC glGetStringSRC = NULL;
+glColor4ubPROC glColor4ubSRC = NULL;
+glMatrixModePROC glMatrixModeSRC = NULL;
+glLoadIdentityPROC glLoadIdentitySRC = NULL;
+glPushMatrixPROC glPushMatrixSRC = NULL;
+glOrthoPROC glOrthoSRC = NULL;
+glRotatefPROC glRotatefSRC = NULL;
+glTranslatefPROC glTranslatefSRC = NULL;
+glClearColorPROC glClearColorSRC = NULL;
+glClearPROC glClearSRC = NULL;
+glColor3fPROC glColor3fSRC = NULL;
+glVertex2fPROC glVertex2fSRC = NULL;
+glEndPROC glEndSRC = NULL;
+glTexCoord2fPROC glTexCoord2fSRC = NULL;
+glColor4fPROC glColor4fSRC = NULL;
+glVertex3fPROC glVertex3fSRC = NULL;
+glPopMatrixPROC glPopMatrixSRC = NULL;
+glDeleteTexturesPROC glDeleteTexturesSRC = NULL;
+glDrawArraysPROC glDrawArraysSRC = NULL;
+
+#define glEnable glEnableSRC
+#define glDisable glDisableSRC
+#define glBindTexture glBindTextureSRC
+#define glPixelStorei glPixelStoreiSRC
+#define glGenTextures glGenTexturesSRC
+#define glTexParameteri glTexParameteriSRC
+#define glTexImage2D glTexImage2DSRC
+#define glBegin glBeginSRC
+#define glViewport glViewportSRC
+#define glMultMatrixf glMultMatrixfSRC
+#define glGetError glGetErrorSRC
+#define glGetString glGetStringSRC
+#define glColor4ub glColor4ubSRC
+#define glMatrixMode glMatrixModeSRC
+#define glLoadIdentity glLoadIdentitySRC
+#define glPushMatrix glPushMatrixSRC
+#define glOrtho glOrthoSRC
+#define glRotatef glRotatefSRC
+#define glTranslatef glTranslatefSRC
+#define glClearColor glClearColorSRC
+#define glClear glClearSRC
+#define glColor3f glColor3fSRC
+#define glVertex2f glVertex2fSRC
+#define glEnd glEndSRC
+#define glTexCoord2f glTexCoord2fSRC
+#define glColor4f glColor4fSRC
+#define glVertex3f glVertex3fSRC
+#define glPopMatrix glPopMatrixSRC
+#define glDeleteTextures glDeleteTexturesSRC
+#define glDrawArrays glDrawArraysSRC
+
+extern int RGL_loadGL(const char* library);
+extern void RGL_unloadGL(void);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif
@@ -587,7 +687,6 @@ void RGL_debug_shader(u32 src, const char *shader, const char *action) {
 
 #ifdef RGL_OPENGL_LEGACY
 void rglBegin(int mode) {
-    printf("%i\n", mode - 0x0010);
     if (mode > 0x0010)
         return glBegin(mode - 0x0010);
     return glBegin(mode);
@@ -1002,6 +1101,7 @@ void rglLegacy(u8 state) {
     #endif
 }
 
+#ifdef RGL_DEBUG
 void rglGetError(void) {
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
@@ -1028,6 +1128,7 @@ void rglGetError(void) {
          exit(1);
     }
 }
+#endif
 
 #if defined(RGL_MODERN_OPENGL)
 
@@ -1336,6 +1437,8 @@ RGL_MATRIX rglMatrixMultiply(float left[16], float right[16]) {
     };
 }
 
+#define RGL_PROC_DEF(proc, name) name##SRC = (name##PROC)proc(#name)
+
 int RGL_loadGL3(RGLloadfunc proc) {
     RGL_PROC_DEF(proc, glShaderSource);
     RGL_PROC_DEF(proc, glCreateShader);
@@ -1410,7 +1513,125 @@ int RGL_loadGL3(RGLloadfunc proc) {
     
     return 0;
 }
-
 #endif /* RGL_MODERN_OPENGL */
+
+#ifdef RGL_CUSTOM_OPENGL
+
+#ifdef _WIN32
+#define RGL_GL_PROC_DEF(proc, name) name##SRC = (name##PROC)GetProcAddress(#proc, #name)
+#else
+#define RGL_GL_PROC_DEF(proc, name) name##SRC = (name##PROC)dlsym(#proc, #name)
+#endif
+
+
+#if !defined(__WIN32) && defined(__unix__)
+#include <dlfcn.h>
+#endif
+
+#ifdef _WIN32
+    HMODULE RGL_GLProc = NULL;
+#else
+    void* RGL_GLProc = NULL;
+#endif
+
+int RGL_loadGL(const char* library) {
+    if (RGL_GLProc == NULL)
+    #ifdef _WIN32
+        RGL_GLProc = LoadLibrary("opengl32.dll");
+    #else
+        RGL_GLProc = dlopen("/usr/lib/libGL.so.1.7.0", RTLD_LAZY);
+    #endif
+
+    if (RGL_GLProc == NULL) {
+        #ifdef RGL_DEBUG
+        printf("Failed to load OpenGL\n");
+        #endif
+        return 1;
+    }
+
+    RGL_GL_PROC_DEF(RGL_GLProc, glEnable);
+    RGL_GL_PROC_DEF(RGL_GLProc, glBindTexture);
+    RGL_GL_PROC_DEF(RGL_GLProc, glPixelStorei);
+    RGL_GL_PROC_DEF(RGL_GLProc, glGenTextures);
+    RGL_GL_PROC_DEF(RGL_GLProc, glTexParameteri);
+    RGL_GL_PROC_DEF(RGL_GLProc, glTexImage2D);
+    RGL_GL_PROC_DEF(RGL_GLProc, glBegin);
+    RGL_GL_PROC_DEF(RGL_GLProc, glViewport);
+    RGL_GL_PROC_DEF(RGL_GLProc, glMultMatrixf);
+    RGL_GL_PROC_DEF(RGL_GLProc, glGetError);
+    RGL_GL_PROC_DEF(RGL_GLProc, glGetString);
+    RGL_GL_PROC_DEF(RGL_GLProc, glColor4ub);
+    RGL_GL_PROC_DEF(RGL_GLProc, glMatrixMode);
+    RGL_GL_PROC_DEF(RGL_GLProc, glLoadIdentity);
+    RGL_GL_PROC_DEF(RGL_GLProc, glPushMatrix);
+    RGL_GL_PROC_DEF(RGL_GLProc, glOrtho);
+    RGL_GL_PROC_DEF(RGL_GLProc, glRotatef);
+    RGL_GL_PROC_DEF(RGL_GLProc, glTranslatef);
+    RGL_GL_PROC_DEF(RGL_GLProc, glClearColor);
+    RGL_GL_PROC_DEF(RGL_GLProc, glClear);
+    RGL_GL_PROC_DEF(RGL_GLProc, glColor3f);
+    RGL_GL_PROC_DEF(RGL_GLProc, glVertex2f);
+    RGL_GL_PROC_DEF(RGL_GLProc, glEnd);
+    RGL_GL_PROC_DEF(RGL_GLProc, glTexCoord2f);
+    RGL_GL_PROC_DEF(RGL_GLProc, glColor4f);
+    RGL_GL_PROC_DEF(RGL_GLProc, glVertex3f);
+    RGL_GL_PROC_DEF(RGL_GLProc, glPopMatrix);
+    RGL_GL_PROC_DEF(RGL_GLProc, glDeleteTextures);
+    RGL_GL_PROC_DEF(RGL_GLProc, glDisable);
+    RGL_GL_PROC_DEF(RGL_GLProc, glDrawArrays);
+
+    if (glEnableSRC == NULL ||
+        glBindTextureSRC == NULL ||
+        glPixelStoreiSRC == NULL ||
+        glGenTexturesSRC == NULL ||
+        glTexParameteriSRC == NULL ||
+        glTexImage2DSRC == NULL ||
+        glBeginSRC == NULL ||
+        glViewportSRC == NULL ||
+        glMultMatrixfSRC == NULL ||
+        glGetErrorSRC == NULL ||
+        glGetStringSRC == NULL ||
+        glColor4ubSRC == NULL ||
+        glMatrixModeSRC == NULL ||
+        glLoadIdentitySRC == NULL ||
+        glPushMatrixSRC == NULL ||
+        glOrthoSRC == NULL ||
+        glRotatefSRC == NULL ||
+        glTranslatefSRC == NULL ||
+        glClearColorSRC == NULL ||
+        glClearSRC == NULL ||
+        glColor3fSRC == NULL ||
+        glVertex2fSRC == NULL ||
+        glEndSRC == NULL ||
+        glTexCoord2fSRC == NULL ||
+        glColor4fSRC == NULL ||
+        glVertex3fSRC == NULL ||
+        glPopMatrixSRC == NULL ||
+        glDeleteTexturesSRC == NULL ||
+        glDisableSRC == NULL ||
+        glDrawArraysSRC == NULL
+    ){
+        #ifdef RGL_DEBUG
+        printf("Failed to load OpenGL\n");
+        #endif
+        return 1;
+    }
+
+
+    return 0;
+}
+
+void RGL_unloadGL(void) {
+    if (RGL_GLProc == NULL) 
+        return;
+
+    #ifdef _WIN32
+        FreeLibrary(RGL_GLProc);
+    #else
+        dlclose(RGL_GLProc);
+    #endif
+}
+
+#endif
 
 #endif /* RGL_IMPLEMENTATION */
