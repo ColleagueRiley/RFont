@@ -781,6 +781,10 @@ size_t RFont_draw_text_len(RFont_font* font, const char* text, size_t len, float
 #define GL_TEXTURE_SWIZZLE_RGBA           0x8E46
 #endif
 
+#ifndef GL_TEXTURE0
+#define GL_TEXTURE0				0x84C0
+#endif
+
 #ifdef RFONT_DEBUG
 
 #ifndef GL_DEBUG_TYPE_ERROR
