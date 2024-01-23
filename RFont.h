@@ -845,7 +845,9 @@ u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
    glBindTexture(GL_TEXTURE_2D, 0);
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
    glGenTextures(1, &id);
+   #if !defined(RFONT_RENDER_LEGACY)
    glActiveTexture(GL_TEXTURE0 + id - 1);
+   #endif
    glBindTexture(GL_TEXTURE_2D, id);
 
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -858,8 +860,11 @@ u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlasWidth, atlasHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
    free(data);
-	
+   
+   #if !defined(RFONT_RENDER_LEGACY)
    glActiveTexture(GL_TEXTURE0 + id - 1);
+   #endif
+
    glBindTexture(GL_TEXTURE_2D, id);
 	static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleRgbaParams);
@@ -886,7 +891,10 @@ void RFont_bitmap_to_atlas(u32 atlas, u8* bitmap, float x, float y, float w, flo
 	glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &skipPixels);
 	glGetIntegerv(GL_UNPACK_SKIP_ROWS, &skipRows);
    
+   #if !defined(RFONT_RENDER_LEGACY)
    glActiveTexture(GL_TEXTURE0 + atlas - 1);
+   #endif
+
 	glBindTexture(GL_TEXTURE_2D, atlas);
 
 	RFont_push_pixel_values(1, w, 0, 0);
@@ -960,7 +968,10 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
 
    glEnable(GL_BLEND);
    glEnable(GL_TEXTURE_2D);
+   #if !defined(RFONT_RENDER_LEGACY)
    glActiveTexture(GL_TEXTURE0 + atlas - 1);
+   #endif
+
    glBindTexture(GL_TEXTURE_2D, atlas);
 
 	glPushMatrix();
@@ -1131,7 +1142,7 @@ void RFont_render_text(u32 atlas, float* verts, float* tcoords, size_t nverts) {
    if (RFont_gl.legacy) {
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
-      glActiveTexture(GL_TEXTURE0 + atlas - 1);
+
       glBindTexture(GL_TEXTURE_2D, atlas);
       glPushMatrix();
 
