@@ -109,7 +109,7 @@ you want to change anything
 #endif
 
 #ifndef RFONT_ATLAS_WIDTH
-#define RFONT_ATLAS_WIDTH 15000
+#define RFONT_ATLAS_WIDTH 6000
 #endif
 
 #ifndef RFONT_ATLAS_HEIGHT
@@ -569,7 +569,7 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    glyph->src = stbtt_FindGlyphIndex(&font->info, codepoint);
 
-   if (glyph->src == 0 && font2->info.data != font->info.data) {
+   if (glyph->src == 0 && font2 != NULL && font2->info.data != font->info.data) {
       stbtt_fontinfo saveInfo = font->info;
 
       RFont_font* fakeFont = font;
@@ -852,8 +852,8 @@ u32 RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
 
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-   
-   glPixelStorei(GL_UNPACK_ROW_LENGTH, atlasWidth);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
    
    u8* data = (u8*)calloc(sizeof(u8), atlasWidth * atlasHeight * 4);
 
