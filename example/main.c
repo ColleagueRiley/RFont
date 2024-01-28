@@ -49,9 +49,13 @@ int main(int argc, char **argv) {
     RFont_font* font = RFont_font_init("DejaVuSans.ttf");
     RFont_font* japanese = RFont_font_init("DroidSansJapanese.ttf");
 
+
     bool running = true;
 
+    glViewport(0, 0, win->w, win->h);
+    
     while (running) {
+ 
         while(RGFW_window_checkEvent(win)) {   
             if (win->event.type == RGFW_quit) {
                 running = false;

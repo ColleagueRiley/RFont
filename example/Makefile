@@ -34,11 +34,11 @@ all:
 	make rgl
 
 gl:
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl
 rgl:
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl
+	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl
 gl3:
-	$(CC) main.c $(LIBS) -I./ext -I../ -Wall -o gl3
+	$(CC) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3
 
 clean:
 	rm gl3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so gl.exe.so rgl.exe.so -f
