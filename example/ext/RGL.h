@@ -23,12 +23,15 @@
 /* 
 MACRO #DEFINE ARGUMENTS
 
+(MAKE SURE RGL_IMPLEMENTATION is in exactly one header or you use -D RGL_IMPLEMENTATION)
+
 ***
-#define RGL_IMPLEMENTATION - include the RGL defines, this line must be included in at least one file or argument (-D), in your project
+#define RGL_IMPLEMENTATION - include the RGL defines, this line must be included in exactly one file or argument (-D), in your project
 ***
 
 #define RGL_MODERN_OPENGL - Use the modern opengl backend (this is enabled by default)
 #define RGL_OPENGL_LEGACY - Use the legacy opengl backend
+#define RGL_NO_GL_LOADER  - Do not use the RGL OpenGL loader (you'll have to use something like GLAD instead)
 #define RGL_NO_X64_OPTIMIZATIONS - Use x64 optimizations (x64 only), eg. SIMD
 #define RGL_ALLOC_BATCHES - Allocate room for batches instead of using a stack-based c array
 #define RGL_ALLOC_MATRIX_STACK - Allocate room for the matrix stack instead of using a stack-based c array
@@ -116,7 +119,7 @@ typedef u8 b8;
 #endif
 
 #ifndef RGL_MAX_BATCHES
-#define RGL_MAX_BATCHES 1028
+#define RGL_MAX_BATCHES 2028
 #endif
 
 #ifndef RGL_MAX_BUFFER_ELEMENTS
@@ -130,12 +133,14 @@ typedef u8 b8;
 
 #ifndef RGL_QUADS
 #define RGL_LINES                                0x0001      /* GL_LINES */
-#define RGL_TRIANGLES                            0x0004      /* GL_TRIANGLES */
+#define RGL_TRIANGLES                            0x0004      /* GL_TRIANGLES */  
+#define RGL_TRIANGLE_FAN                          0x0006      /* GL_TRIANGLE_FAN  */  
 #define RGL_QUADS                                0x0007      /* GL_QUADS */
 
 /* these ensure GL_DEPTH_TEST is disabled when they're being rendered */
 #define RGL_LINES_2D                                0x0011      /* GL_LINES */
 #define RGL_TRIANGLES_2D                            0x0014      /* GL_TRIANGLES */
+#define RGL_TRIANGLE_FAN_2D                         0x0016      /* GL_TRIANGLE_FAN  */ 
 #define RGL_QUADS_2D                                0x0017      /* GL_QUADS */
 #endif
 
@@ -210,9 +215,8 @@ typedef struct RGL_BATCH {
 extern "C" {            /* Prevents name mangling of functions */
 #endif
 
-RGLDEF void rglInit(i32 width,  i32 height, void* loader);             /* Initialize RGLinfo (buffers, shaders, textures, states) */
+RGLDEF void rglInit(void* loader);             /* Initialize RGLinfo (buffers, shaders, textures, states) */
 RGLDEF void rglClose(void);                             /* De-initialize RGLinfo (buffers, shaders, textures) */
-RGLDEF void rglSetFramebufferSize(i32 width, i32 height);            /* Set current framebuffer size */
 
 RGLDEF void rglRenderBatch(void);                         /* Draw render batch data (Update->Draw->Reset) */
 RGLDEF void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocation, u32 colorLocation);
@@ -271,7 +275,6 @@ RGLDEF void rglVertex2f(float x, float y);
 RGLDEF void rglVertex3f(float x, float y, float z);
 
 #define rglViewport glViewport
-#define rglLineWidth glLineWidth
 
 RGLDEF void rglMatrixMode(int mode);
 RGLDEF void rglPushMatrix(void);
@@ -287,6 +290,7 @@ RGLDEF RGL_MATRIX rglMatrixMultiply(float left[16], float right[16]);  /* Multip
 
 RGLDEF i32 rglCheckRenderBatchLimit(int vCount);                             /* Check internal buffer overflow for a given number of vertex */
 
+#ifndef RGL_NO_GL_LOADER
 #define RGL_PROC_DEF(proc, name) name##SRC = (name##PROC)proc(#name)
 
 typedef void (*RGLapiproc)(void);
@@ -388,6 +392,7 @@ glDebugMessageCallbackPROC glDebugMessageCallbackSRC = NULL;
 #define glDebugMessageCallback glDebugMessageCallbackSRC
 
 extern int RGL_loadGL3(RGLloadfunc proc);
+#endif
 
 #endif
 #if defined(__cplusplus)
@@ -412,52 +417,49 @@ extern int RGL_loadGL3(RGLloadfunc proc);
 
 #ifdef RGL_MODERN_OPENGL
 typedef struct RGL_INFO {
-    i32 vertexCounter;                  /* Current active render batch vertex counter (generic, used for all batches) */
-    float tcoord[3];
-    float color[4];
-
-    i32 matrixMode;              /* Current matrix mode */
-    RGL_MATRIX* matrix;              /* Current matrix pointer */
-    RGL_MATRIX modelview;                   /* Default modelview matrix */
-    RGL_MATRIX projection;                  /* Default projection matrix */
-    
 	RGL_MATRIX transform; /* transformation matrix*/
-	u8 transformRequired;
-
     #ifdef RGL_ALLOC_MATRIX_STACK 
     RGL_MATRIX* stack
     #else
     RGL_MATRIX stack[RGL_MAX_MATRIX_STACK_SIZE]; /* RGL_MATRIX stack for push/pop */
     #endif
 
+    RGL_MATRIX* matrix;              /* Current matrix pointer */
+    RGL_MATRIX modelview;                   /* Default modelview matrix */
+    RGL_MATRIX projection;                  /* Default projection matrix */
+    RGL_BATCH* batches;          /* Draw calls array, depends on tex */
+
+    u16* indices;
+    
+    float* vertices;
+	float* colors;
+    float* tcoords;
+
+    i32 vertexCounter;                  /* Current active render batch vertex counter (generic, used for all batches) */
+    
+    i32 matrixMode;              /* Current matrix mode */
+
+	u8 transformRequired;
+
     i32 stackCounter;                   /* RGL_MATRIX stack counter */
 
     u32 tex;      /* Default texture used on shapes/poly drawing (required by shader)*/
-    float lineWidth;    /* Default lineWidth used on shapes/poly drawing (required by shader)*/
     u32 vShader;      /* Default vertex shader id (used by default shader program)*/
     u32 fShader;      /* Default fragment shader id (used by default shader program)*/
     u32 program;       /* Default shader program id, supports vertex color and diffuse texture*/
     u32 mvp;
     u32 defaultTex;
-
-    i32 width;               /* Current framebuffer width*/
-    i32 height;              /* Current framebuffer height*/
-
-	float* vertices;
-	float* colors;
-    float* tcoords;
-
-    u16* indices;
     u32 elementCount;
 
     i32 bufferCount;            /* Number of vertex buffers (multi-buffering support) */
     i32 currentBuffer;          /* Current buffer tracking in case of multi-buffering */
     i32 drawCounter;            /* Draw calls counter */
 
-    RGL_BATCH* batches;          /* Draw calls array, depends on tex */
-    
-    u32 vao, vbo, tbo, cbo, ebo; /* array object and array buffers */
+    float lineWidth;    /* Default lineWidth used on shapes/poly drawing (required by shader)*/
+    float tcoord[3];
+    float color[4];
 
+    u32 vao, vbo, tbo, cbo, ebo; /* array object and array buffers */
     u8 legacy;
 } RGL_INFO;
 
@@ -491,7 +493,6 @@ void rglSetTexture(u32 id) {
     {
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, id);
-
         return;
     }
 #if defined(RGL_MODERN_OPENGL)
@@ -618,8 +619,9 @@ void rglBegin(int mode) {
 #endif
 
 /* Initialize RGLinfo: OpenGL extensions, default buffers/shaders/textures, OpenGL states*/
-void rglInit(i32 width, i32 height, void *loader) {
+void rglInit(void *loader) {
 #if defined(RGL_MODERN_OPENGL)
+    #ifndef RGL_NO_GL_LOADER
     if (RGL_loadGL3((RGLloadfunc)loader)) {
         #ifdef RGL_DEBUG
         printf("Failed to load an OpenGL 3.3 Context, reverting to OpenGL Legacy\n");
@@ -628,6 +630,7 @@ void rglInit(i32 width, i32 height, void *loader) {
         RGLinfo.legacy = 2;   
         return;
     }
+    #endif
 
     RGLinfo.legacy = 0; 
 
@@ -795,17 +798,10 @@ void rglInit(i32 width, i32 height, void *loader) {
     RGLinfo.modelview = rglMatrixIdentity();
     RGLinfo.matrix = &RGLinfo.modelview;
 
-    /* Store screen size into global variables */
-    RGLinfo.width = width;
-    RGLinfo.height = height;
-
-
     #ifdef RGL_DEBUG
     rglGetError();
     #endif
 #endif
-
-    glViewport(0, 0, width, height);
 }
 
 /* Vertex Buffer Object deinitialization (memory free) */
@@ -862,15 +858,6 @@ void rglClose(void) {
 #endif
 }
 
-void rglSetFramebufferSize(i32 width,  i32 height) {
-    #ifndef RGL_OPENGL_LEGACY
-    RGLinfo.width = width;
-    RGLinfo.height = height;
-    #endif
-    glViewport(0, 0, width, height);
-}
-
-
 void rglRenderBatch() {
     #if defined(RGL_MODERN_OPENGL)
     if (RGLinfo.legacy)
@@ -884,7 +871,7 @@ void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocat
 #if defined(RGL_MODERN_OPENGL)
     if (RGLinfo.legacy)
         return;
-
+        
     if (RGLinfo.vertexCounter > 0) {
         glBindVertexArray(RGLinfo.vao);
 
@@ -899,7 +886,6 @@ void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocat
         /* Colors buffer */
         glBindBuffer(GL_ARRAY_BUFFER, RGLinfo.cbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, RGLinfo.vertexCounter * 4 * sizeof(float), RGLinfo.colors); 
-        
         glBindVertexArray(0);
 
         /* Set current shader and upload current MVP matrix */
@@ -928,27 +914,33 @@ void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocat
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, RGLinfo.ebo);
 
         glActiveTexture(GL_TEXTURE0);
-
+        
         #ifdef RGL_DEBUG
         rglGetError();
         #endif
 
         u32 vertexOffset;
         u32 i;
-        
+
         for (i = 1, vertexOffset = 0; i < RGLinfo.drawCounter; i++) {
             GLenum mode = RGLinfo.batches[i].mode;
             
             if (mode > 0x0010) {
                 mode -= 0x0010;
                 glDisable(GL_DEPTH_TEST);
+                glDepthMask(GL_FALSE);
+            }
+            else {
+                glEnable(GL_DEPTH_TEST);
+                glDepthMask(GL_TRUE);
             }
 
             /* Bind current draw call texture, activated as GL_TEXTURE0 and Bound to sampler2D texture0 by default */
             glBindTexture(GL_TEXTURE_2D, RGLinfo.batches[i].tex);
             glLineWidth(RGLinfo.batches[i].lineWidth);
+            
             #ifdef RGL_EBO
-            if ((modee == RGL_LINES) || (mode == RGL_TRIANGLES)) 
+            if (mode != RGL_QUADS) 
             #endif
                 glDrawArrays(mode, vertexOffset, RGLinfo.batches[i].vertexCount);
             #ifdef RGL_EBO
@@ -958,8 +950,10 @@ void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocat
 
             vertexOffset += (RGLinfo.batches[i].vertexCount + RGLinfo.batches[i].vertexAlignment);
 
-            if (RGLinfo.batches[i].mode > 0x0010)
+            if (RGLinfo.batches[i].mode > 0x0010) {
                 glEnable(GL_DEPTH_TEST);
+                glDepthMask(GL_TRUE);
+            }
 
             #ifdef RGL_DEBUG
             rglGetError();
@@ -1001,15 +995,15 @@ void rglRenderBatchWithShader(u32 program, u32 vertexLocation, u32 texCoordLocat
 }
 
 void rglPerspective(double fovY, double aspect, double zNear, double zFar) {
-    const double f = tan(fovY / 2.0);
+    const double f = 1 / tan(fovY / 2.0);
     float projectionMatrix[16] = {0};
-
+    
     projectionMatrix[0] = f / aspect;
     projectionMatrix[5] = f;
     projectionMatrix[10] = (zFar + zNear) / (zNear - zFar);
     projectionMatrix[11] = -1.0;
     projectionMatrix[14] = (2.0 * zFar * zNear) / (zNear - zFar);
-
+    
     rglMultMatrixf(projectionMatrix);
 }
 
@@ -1094,9 +1088,9 @@ void rglBegin(int mode) {
         RGLinfo.batches[RGLinfo.drawCounter - 1].tex != RGLinfo.tex ||
         RGLinfo.batches[RGLinfo.drawCounter - 1].lineWidth != RGLinfo.lineWidth ||
         RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount > 0) {
-            if (RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES) 
+            if (RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES_2D) 
                 RGLinfo.batches[RGLinfo.drawCounter - 1].vertexAlignment = ((RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount < 4)? RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount : RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%4);
-            else if (RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES) 
+            else if (RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES_2D || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS_2D || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLE_FAN || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLE_FAN_2D) 
                 RGLinfo.batches[RGLinfo.drawCounter - 1].vertexAlignment = ((RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount < 4)? 1 : (4 - (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%4)));
             else 
                 RGLinfo.batches[RGLinfo.drawCounter - 1].vertexAlignment = 0;
@@ -1119,6 +1113,10 @@ void rglBegin(int mode) {
 void rglEnd(void) {
     if (RGLinfo.legacy)
         return glEnd();
+
+    if (RGLinfo.drawCounter >= RGL_MAX_BATCHES - 28) {
+        rglRenderBatch();
+    }
 }
 
 /* Define one vertex (texture coordinate) */
@@ -1176,7 +1174,7 @@ void rglVertex3f(float x, float y, float z) {
         if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_LINES_2D) &&
             (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%2 == 0))
                 rglCheckRenderBatchLimit(2 + 1);
-        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES_2D) &&
+        else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLES_2D || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLE_FAN || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_TRIANGLE_FAN_2D) &&
             (RGLinfo.batches[RGLinfo.drawCounter - 1].vertexCount%3 == 0))
                 rglCheckRenderBatchLimit(3 + 1);
         else if ((RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS || RGLinfo.batches[RGLinfo.drawCounter - 1].mode == RGL_QUADS_2D) &&
@@ -1374,6 +1372,7 @@ RGL_MATRIX rglMatrixMultiply(float left[16], float right[16]) {
     };
 }
 
+#ifndef RGL_NO_GL_LOADER
 int RGL_loadGL3(RGLloadfunc proc) {
     RGL_PROC_DEF(proc, glShaderSource);
     RGL_PROC_DEF(proc, glCreateShader);
@@ -1448,6 +1447,7 @@ int RGL_loadGL3(RGLloadfunc proc) {
     
     return 0;
 }
+#endif
 
 #endif /* RGL_MODERN_OPENGL */
 

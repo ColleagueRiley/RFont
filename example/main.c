@@ -29,10 +29,10 @@ int main(int argc, char **argv) {
     RGFW_setGLVersion(3, 3);
     #endif
 
-    RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 1000, 500, 0);
+    RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", RGFW_RECT(200, 200, 1000, 500), 0);
 
     #if defined(RFONT_RENDER_RGL) && !defined(RFONT_RENDER_LEGACY)    
-    rglInit(win->w, win->h, (void*)RGFW_getProcAddress);    
+    rglInit((void*)RGFW_getProcAddress);    
     #endif
 
     #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
@@ -45,14 +45,14 @@ int main(int argc, char **argv) {
     glClearColor(0.3f, 0.3f, 0.32f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    RFont_init(win->w, win->h);
+    RFont_init(win->r.w, win->r.h);
     RFont_font* font = RFont_font_init("DejaVuSans.ttf");
     RFont_font* japanese = RFont_font_init("DroidSansJapanese.ttf");
 
 
     bool running = true;
 
-    glViewport(0, 0, win->w, win->h);
+    glViewport(0, 0, win->r.w, win->r.h);
     
     while (running) {
  
@@ -82,12 +82,8 @@ int main(int argc, char **argv) {
         #endif
 
         RGFW_window_swapBuffers(win);
-        
-        #if defined(RFONT_RENDER_RGL) && !defined(RFONT_RENDER_LEGACY)
-        rglSetFramebufferSize(win->w, win->h);  
-        #endif
-        
-        RFont_update_framebuffer(win->w, win->h);
+                
+        RFont_update_framebuffer(win->r.w, win->r.h);
     }
 
     RFont_font_free(font);
