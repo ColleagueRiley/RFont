@@ -1,6 +1,6 @@
 CC = gcc
 
-LIBS := -lshell32 -lgdi32 -lm -lopengl32 --static
+LIBS := -lshell32 -lXInput -lgdi32 -lm -lopengl32 -ggdb -lShcore
 EXT = .exe
 
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
@@ -17,14 +17,14 @@ else
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBS := -lshell32 -lgdi32 -lm -lopengl32 --static
+	LIBS := -lXInput -ggdb -lshell32 -lgdi32 -lShcore -lm -ldwmapi -lopengl32 --static
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
-	LIBS := -I./ext/Silicon/ -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
+	LIBS := -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
 	EXT = 
 endif
 ifeq ($(detected_OS),Linux)
-    LIBS := -I./include -lX11 -lGLX -lm -lGL
+    LIBS := -I./include -lXrandr -lX11 -lm -lGL
 	EXT =
 endif
 

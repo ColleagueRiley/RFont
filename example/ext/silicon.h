@@ -158,6 +158,8 @@ typedef void NSSavePanel;
 typedef void NSOpenPanel;
 typedef void NSColorPanel;
 typedef void NSBundle;
+typedef void NSNotification;
+typedef void NSNotificationCenter;
 #ifndef __OBJC__
 typedef void NSDictionary;
 typedef void NSURL;
@@ -435,6 +437,7 @@ enum {
 	NSOpenGLPFAAllowOfflineRenderers NS_OPENGL_ENUM_DEPRECATED(10.5, 10.14)  =  96,  /* allow use of offline renderers               */
 	NSOpenGLPFAAcceleratedCompute    NS_OPENGL_ENUM_DEPRECATED(10.0, 10.14)  =  97,	/* choose a hardware accelerated compute device */
 	
+	NSOpenGLProfileVersionLegacy 	 NS_OPENGL_ENUM_DEPRECATED(10.7, 10.14)  = 0x1000,
 	NSOpenGLPFAOpenGLProfile         NS_OPENGL_ENUM_DEPRECATED(10.7, 10.14)  =  99,    /* specify an OpenGL Profile to use             */
 	NSOpenGLProfileVersion3_2Core    NS_OPENGL_ENUM_DEPRECATED(10.0, 10.14)  = 0x3200, /* The 3.2 Profile of OpenGL */
 	NSOpenGLProfileVersion4_1Core    NS_OPENGL_ENUM_DEPRECATED(10.0, 10.14)  = 0x3200, /* The 4.1 profile of OpenGL */
@@ -684,6 +687,8 @@ SICDEF void NSApplication_terminate(NSApplication* application, id sender);
 /* */
 SICDEF void NSApplication_sendEvent(NSApplication* application, NSEvent* event);
 /* */
+SICDEF void NSApplication_postEvent(NSApplication* application, NSEvent* event, bool atStart);
+/* */
 SICDEF void NSApplication_updateWindows(NSApplication* application);
 /* */
 SICDEF void NSApplication_activateIgnoringOtherApps(NSApplication* application, bool flag);
@@ -749,6 +754,8 @@ SICDEF void NSWindow_setFrameAndDisplay(NSWindow* window, NSRect frame, bool dis
 SICDEF void NSWindow_performMiniaturize(NSWindow* window, SEL s);
 /* */
 SICDEF void NSWindow_performZoom(NSWindow* window, SEL s);
+/* */
+SICDEF void NSWindow_deminiaturize(NSWindow* window, SEL s);
 /* */
 SICDEF NSPoint NSWindow_convertPointFromScreen(NSWindow* window, NSPoint point);
 /* Passes a display message down the window’s view hierarchy, thus redrawing all views within the window. */
@@ -1318,6 +1325,7 @@ enum { /* classes */
 	NS_SLIDER_CODE,
 	NS_URL_CODE,
 	NS_BUNDLE_CODE,
+	NS_NOTIFICATIONCENTER_CODE,
 	NS_CLASS_LEN
 };
 
@@ -1352,6 +1360,7 @@ enum{
 	NS_APPLICATION_STOP_CODE,
 	NS_APPLICATION_TERMINATE_CODE,
 	NS_APPLICATION_SEND_EVENT_CODE,
+	NS_APPLICATION_POST_EVENT_CODE,
 	NS_APPLICATION_UPDATE_WINDOWS_CODE,
 	NS_APPLICATION_ACTIVATE_IGNORING_OTHER_APPS_CODE,
 	NS_APPLICATION_NEXT_EVENT_MATCHING_MASK_CODE,
@@ -1416,6 +1425,13 @@ enum{
 	NS_CURSOR_IMAGE_CODE,
 	NS_CURSOR_HOT_SPOT_CODE,
 	NS_CURSOR_ARROW_CURSOR_CODE,
+	NS_CURSOR_IBEAM_CURSOR_CODE,
+	NS_CURSOR_CROSHAIR_CURSOR_CODE,
+	NS_CURSOR_POINTING_HAND_CURSOR_CODE,
+	NS_CURSOR_RESIZE_LEFT_RIGHT_CURSOR_CODE,
+	NS_CURSOR_RESIZE_UP_DOWN_CURSOR_CODE,
+	NS_CURSOR_CLOSED_HAND_CURSOR_CODE,
+	NS_CURSOR_OPERATION_NOT_ALLOWED_CURSOR_CODE,
 	NS_CURSOR_INIT_WITH_IMAGE_CODE,
 	NS_CURSOR_HIDE_CODE,
 	NS_CURSOR_UNHIDE_CODE,
@@ -1552,13 +1568,19 @@ enum{
 	NS_WINDOW_IS_MINIATURIZED_CODE,
 	NS_WINDOW_IS_ZOOMED_CODE,
 	NS_WINDOW_PERFORM_MINIATURIZE_CODE,
+	NS_WINDOW_DEMINIATURIZE_CODE,
 	NS_WINDOW_PERFORM_ZOOM_CODE,
 	NS_WINDOW_STYLE_MASK_CODE,
 	NS_STRING_FROM_CLASS_CODE,
 	NS_STRING_IS_EQUAL_CODE,
 	NS_WINDOW_SET_MAX_SIZE_CODE,
 	NS_WINDOW_SET_MIN_SIZE_CODE,
-  
+	NS_GRAPHICS_CONTEXT_WIDTH_WINDOW_CODE,
+	NS_CURSOR_PERFORM_SELECTOR,
+	NS_NOTIFICATIONCENTER_ADD_OBSERVER,
+	NS_NOTIFICATIONCENTER_DEFAULT_CENTER,
+	NS_VIEW_SET_LAYER_CONTENTS_CODE,
+
 	NS_FUNC_LEN
 };
 
@@ -1602,6 +1624,7 @@ void si_initNS(void) {
 	SI_NS_CLASSES[NS_SLIDER_CODE] = objc_getClass("NSSlider");
 	SI_NS_CLASSES[NS_URL_CODE] = objc_getClass("NSURL");
 	SI_NS_CLASSES[NS_BUNDLE_CODE] = objc_getClass("NSBundle");
+	SI_NS_CLASSES[NS_NOTIFICATIONCENTER_CODE] = objc_getClass("NSNotificationCenter");
 
 	SI_NS_FUNCTIONS[NS_APPLICATION_SET_ACTIVATION_POLICY_CODE] = sel_getUid("setActivationPolicy:");
 	SI_NS_FUNCTIONS[NS_APPLICATION_SAPP_CODE] = sel_getUid("sharedApplication");
@@ -1675,10 +1698,16 @@ void si_initNS(void) {
 	SI_NS_FUNCTIONS[NS_IMAGE_INIT_WITH_CGIMAGE_CODE] = sel_getUid("initWithCGImage:size:");
 	SI_NS_FUNCTIONS[NS_IMAGE_ADD_REPRESENTATION_CODE] = sel_getUid("addRepresentation:");
 	SI_NS_FUNCTIONS[NS_CURSOR_CURRENT_CURSOR_CODE] = sel_getUid("currentCursor");
-	SI_NS_FUNCTIONS[NS_GRAPHICS_CONTEXT_SET_CURRENT_CONTEXT_CODE] = sel_getUid("setCurrentContext:");
 	SI_NS_FUNCTIONS[NS_CURSOR_IMAGE_CODE] = sel_getUid("image");
 	SI_NS_FUNCTIONS[NS_CURSOR_HOT_SPOT_CODE] = sel_getUid("hotSpot");
 	SI_NS_FUNCTIONS[NS_CURSOR_ARROW_CURSOR_CODE] = sel_getUid("arrowCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_IBEAM_CURSOR_CODE] = sel_getUid("IBeamCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_CROSHAIR_CURSOR_CODE] = sel_getUid("crosshairCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_POINTING_HAND_CURSOR_CODE] = sel_getUid("pointingHandCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_RESIZE_LEFT_RIGHT_CURSOR_CODE] = sel_getUid("resizeLeftRightCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_RESIZE_UP_DOWN_CURSOR_CODE] = sel_getUid("resizeUpDownCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_CLOSED_HAND_CURSOR_CODE] = sel_getUid("closedHandCursor");
+	SI_NS_FUNCTIONS[NS_CURSOR_OPERATION_NOT_ALLOWED_CURSOR_CODE] = sel_getUid("operationNotAllowedCursor");
 	SI_NS_FUNCTIONS[NS_CURSOR_INIT_WITH_IMAGE_CODE] = sel_getUid("initWithImage:hotSpot:");
 	SI_NS_FUNCTIONS[NS_CURSOR_HIDE_CODE] = sel_getUid("hide");
 	SI_NS_FUNCTIONS[NS_CURSOR_UNHIDE_CODE] = sel_getUid("unhide");
@@ -1707,12 +1736,14 @@ void si_initNS(void) {
 	SI_NS_FUNCTIONS[NS_BITMAPIMAGEREP_BITMAP_CODE] = sel_getUid("bitmapData");
 	SI_NS_FUNCTIONS[NS_BITMAPIMAGEREP_INIT_BITMAP_CODE] = sel_getUid("initWithBitmapDataPlanes:pixelsWide:pixelsHigh:bitsPerSample:samplesPerPixel:hasAlpha:isPlanar:colorSpaceName:bitmapFormat:bytesPerRow:bitsPerPixel:");
 	SI_NS_FUNCTIONS[NS_VIEW_SET_WANTSLAYER_CODE] = sel_getUid("setWantsLayer:");
+	SI_NS_FUNCTIONS[NS_VIEW_SET_LAYER_CONTENTS_CODE] = sel_getUid("setLayerContents:");
 	SI_NS_FUNCTIONS[NS_STRING_WIDTH_UTF8_STRING_CODE] = sel_getUid("stringWithUTF8String:");
 	SI_NS_FUNCTIONS[NS_STRING_IS_EQUAL_CODE] = sel_getUid("isEqual:");
 	SI_NS_FUNCTIONS[NS_ARRAY_SI_ARRAY_CODE] = sel_getUid("initWithObjects:count:");
 	SI_NS_FUNCTIONS[NS_WINDOW_SET_CONTENT_VIEW_CODE] = sel_getUid("setContentView:");
 	SI_NS_FUNCTIONS[NS_APPLICATION_NEXT_EVENT_MATCHING_MASK_CODE] = sel_getUid("nextEventMatchingMask:untilDate:inMode:dequeue:");
 	SI_NS_FUNCTIONS[NS_APPLICATION_SEND_EVENT_CODE] = sel_getUid("sendEvent:");
+	SI_NS_FUNCTIONS[NS_APPLICATION_POST_EVENT_CODE] = sel_getUid("postEvent:atStart:");
 	SI_NS_FUNCTIONS[NS_APPLICATION_UPDATE_WINDOWS_CODE] = sel_getUid("updateWindows");
 	SI_NS_FUNCTIONS[NS_OPENGL_CONTEXT_FLUSH_BUFFER_CODE] = sel_getUid("flushBuffer");
 	SI_NS_FUNCTIONS[NS_APPLICATION_TERMINATE_CODE] = sel_getUid("terminate:");
@@ -1835,10 +1866,15 @@ void si_initNS(void) {
 	SI_NS_FUNCTIONS[NS_WINDOW_IS_MINIATURIZED_CODE] = sel_getUid("isMiniaturized");
 	SI_NS_FUNCTIONS[NS_WINDOW_IS_ZOOMED_CODE] = sel_getUid("isZoomed");
 	SI_NS_FUNCTIONS[NS_WINDOW_PERFORM_MINIATURIZE_CODE] = sel_getUid("performMiniaturize:");
+	SI_NS_FUNCTIONS[NS_WINDOW_DEMINIATURIZE_CODE] = sel_getUid("deminiaturize:");
 	SI_NS_FUNCTIONS[NS_WINDOW_PERFORM_ZOOM_CODE] = sel_getUid("performZoom:");
 	SI_NS_FUNCTIONS[NS_WINDOW_STYLE_MASK_CODE] = sel_getUid("styleMask");
-	SI_NS_FUNCTIONS[NS_WINDOW_SET_MAX_SIZE_CODE] = sel_getUid("setMinSize:");
-	SI_NS_FUNCTIONS[NS_WINDOW_SET_MIN_SIZE_CODE] = sel_getUid("setMaxSize:");
+	SI_NS_FUNCTIONS[NS_WINDOW_SET_MAX_SIZE_CODE] = sel_getUid("setMaxSize:");
+	SI_NS_FUNCTIONS[NS_WINDOW_SET_MIN_SIZE_CODE] = sel_getUid("setMinSize:");
+	SI_NS_FUNCTIONS[NS_GRAPHICS_CONTEXT_WIDTH_WINDOW_CODE] = sel_getUid("graphicsContextWithWindow:");
+	SI_NS_FUNCTIONS[NS_CURSOR_PERFORM_SELECTOR] = sel_getUid("performSelector:");
+	SI_NS_FUNCTIONS[NS_NOTIFICATIONCENTER_ADD_OBSERVER] = sel_getUid("addObserver:selector:name:object:");
+	SI_NS_FUNCTIONS[NS_NOTIFICATIONCENTER_DEFAULT_CENTER] = sel_getUid("defaultCenter");
 }
 
 void si_impl_func_to_SEL_with_name(const char* class_name, const char* register_name, void* function) {
@@ -2073,6 +2109,12 @@ void NSApplication_sendEvent(NSApplication* application, NSEvent* event) {
 	objc_msgSend_void_id(application, func, event);
 }
 
+void NSApplication_postEvent(NSApplication* application, NSEvent* event, bool atStart) {
+	void* func = SI_NS_FUNCTIONS[NS_APPLICATION_POST_EVENT_CODE];
+	((void (*)(id, SEL, id, bool))objc_msgSend) 
+		(application, func, event, atStart);
+}
+
 void NSApplication_updateWindows(NSApplication* application) {
 	void* func = SI_NS_FUNCTIONS[NS_APPLICATION_UPDATE_WINDOWS_CODE];
 	objc_msgSend_void(application, func);
@@ -2142,14 +2184,14 @@ void NSWindow_setMaxSize(NSWindow* window, NSSize size) {
 	void* func = SI_NS_FUNCTIONS[NS_WINDOW_SET_MAX_SIZE_CODE];
 
 	return ((void (*)(id, SEL, NSSize))objc_msgSend)
-				(SI_NS_CLASSES[NS_WINDOW_CODE], func, size);
+				(window, func, size);
 }
 
 void NSWindow_setMinSize(NSWindow* window, NSSize size) {
 	void* func = SI_NS_FUNCTIONS[NS_WINDOW_SET_MIN_SIZE_CODE];
 
 	return ((void (*)(id, SEL, NSSize))objc_msgSend)
-				(SI_NS_CLASSES[NS_WINDOW_CODE], func, size);
+				(window, func, size);
 }
 
 NSView* NSWindow_contentView(NSWindow* window) {
@@ -2353,6 +2395,11 @@ void NSGraphicsContext_setCurrentContext(NSGraphicsContext* context, NSGraphicsC
 	objc_msgSend_void_id(context, func, currentContext);
 }
 
+NSGraphicsContext* NSGraphicsContext_graphicsContextWithWindow(NSWindow* window) {
+	void* func = SI_NS_FUNCTIONS[NS_GRAPHICS_CONTEXT_WIDTH_WINDOW_CODE];
+	return objc_msgSend_id_id(SI_NS_CLASSES[NS_GRAPHICS_CONTEXT_CODE], func, window);
+}
+
 void NSMenuItem_setSubmenu(NSMenuItem* item, NSMenu* submenu) {
 	void* func = SI_NS_FUNCTIONS[NS_MENU_ITEM_SET_SUBMENU_CODE];
 	objc_msgSend_void_id(item, func, submenu);
@@ -2400,6 +2447,11 @@ void NSWindow_performZoom(NSWindow* window, SEL s) {
 	void* func = SI_NS_FUNCTIONS[NS_WINDOW_PERFORM_ZOOM_CODE];
    objc_msgSend_void_SEL(window, func, s);
 }
+/* */
+void NSWindow_deminiaturize(NSWindow* window, SEL s) {
+	void* func = SI_NS_FUNCTIONS[NS_WINDOW_DEMINIATURIZE_CODE];
+	objc_msgSend_void_SEL(window, func, s);
+}
 
 NSPoint NSWindow_convertPointFromScreen(NSWindow* window, NSPoint point) {
 	void* func = SI_NS_FUNCTIONS[NS_WINDOW_CONVERT_POINT_FROM_SCREEN_CODE];
@@ -2418,6 +2470,15 @@ void NSWindow_contentView_setWantsLayer(NSWindow* window, bool wantsLayer) {
 	NSView* contentView = NSWindow_contentView(window);
 
 	objc_msgSend_void_bool(contentView, func, wantsLayer);
+}
+
+void NSWindow_contentView_setLayerContents(NSWindow* window, NSImage* image) {
+	void* func = SI_NS_FUNCTIONS[NS_VIEW_SET_LAYER_CONTENTS_CODE];
+	
+	NSView* contentView = NSWindow_contentView(window);
+    SEL setImageSelector = sel_registerName("setImage:");
+	
+	objc_msgSend_void_id(contentView, setImageSelector, image);
 }
 
 NSView* NSView_init(void) {
@@ -2894,6 +2955,48 @@ NSCursor* NSCursor_arrowCursor(void) {
 	return (NSCursor *)objc_msgSend_id(nclass, func);
 }
 
+NSCursor* NSCursor_IBeamCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_IBEAM_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_crosshairCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_CROSHAIR_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_pointingHandCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_POINTING_HAND_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_resizeLeftRightCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_RESIZE_LEFT_RIGHT_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_resizeUpDownCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_RESIZE_UP_DOWN_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_closedHandCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_CLOSED_HAND_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+
+NSCursor* NSCursor_operationNotAllowedCursor(void) {
+	void* nclass = SI_NS_CLASSES[NS_CURSOR_CODE];
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_OPERATION_NOT_ALLOWED_CURSOR_CODE];
+	return (NSCursor *)objc_msgSend_id(nclass, func);
+}
+	
 NSCursor* NSCursor_initWithImage(NSImage* newImage, NSPoint aPoint) {
 	void* func = SI_NS_FUNCTIONS[NS_CURSOR_INIT_WITH_IMAGE_CODE];
 	void* nsclass = SI_NS_CLASSES[NS_CURSOR_CODE];
@@ -2927,6 +3030,11 @@ void NSCursor_push(NSCursor* cursor) {
 void NSCursor_set(NSCursor* cursor) {
 	void* func = SI_NS_FUNCTIONS[NS_CURSOR_SET_CODE];
 	objc_msgSend_void(cursor, func);
+}
+
+void NSCursor_performSelector(NSCursor* cursor, void* selector) {
+	void* func = SI_NS_FUNCTIONS[NS_CURSOR_PERFORM_SELECTOR];
+	objc_msgSend_void_SEL(cursor, func, selector);
 }
 
 NSPasteboard* NSPasteboard_generalPasteboard(void) {
@@ -3171,6 +3279,24 @@ NSBundle* NSBundle_mainBundle(void) {
 	void* nsclass = SI_NS_CLASSES[NS_BUNDLE_CODE];
 	
 	return objc_msgSend_id(nsclass, func);   
+}
+
+NSNotificationCenter* NSNotificationCenter_defaultCenter(void) {
+	void* func =  SI_NS_FUNCTIONS[NS_NOTIFICATIONCENTER_DEFAULT_CENTER];
+	void* nsclass = SI_NS_CLASSES[NS_NOTIFICATIONCENTER_CODE];
+
+	return objc_msgSend_id(nsclass, func);
+}
+
+void NSNotificationCenter_addObserver(NSNotificationCenter* center, id observer, SEL aSelector, char* aName, id anObject) {
+	void* func = SI_NS_FUNCTIONS[NS_NOTIFICATIONCENTER_ADD_OBSERVER];
+
+	NSString* str = NSString_stringWithUTF8String(aName);
+
+	((void (*)(id, SEL, id, SEL, NSString*, id))objc_msgSend)
+			(center, func, observer, aSelector, aName, anObject);
+	
+	NSRelease(str);
 }
 
 NSArray* si_array_to_NSArray(siArray(void) array) {
