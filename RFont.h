@@ -632,7 +632,7 @@ size_t RFont_text_width_spacing(RFont_font* font, const char* text, float spacin
 }
 
 size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, float spacing) {
-   float x;
+   float x = 0;
 
    char* str;
    
