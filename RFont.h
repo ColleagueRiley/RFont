@@ -27,7 +27,7 @@ make sure
 
 ** #define RFONT_IMPLEMENTATION ** - include function defines
 
-is in at least one of your files or arguments
+is in exactly one of your files or arguments
 
 #define RFONT_NO_OPENGL - do not define graphics functions (that use opengl)
 #define RFONT_NO_STDIO - do not include stdio.h
@@ -237,17 +237,6 @@ inline void RFont_font_add_string_len(RFont_font* font, const char* string, size
 inline size_t RFont_text_width(RFont_font* font, const char* text, u32 size);
 
 /**
- * @brief Get the width of a specific line of the text based on the size using the font, using a given length.
- * @param font The font stucture to use for drawing
- * @param text The string to draw 
- * @param size The size of the text
- * @param spacing The spacing of the text
- * @param stopLine The line to stop at (starting at 1, 0 = don't stop until the last line)
- * @return The width of the text based on the size
-*/
-size_t RFont_text_line_width(RFont_font* font, const char* text, u32 size, size_t stopLine);
-
-/**
  * @brief Get the width of the text based on the size using the font, using a given length.
  * @param font The font stucture to use for drawing
  * @param text The string to draw 
@@ -263,11 +252,11 @@ inline size_t RFont_text_width_spacing(RFont_font* font, const char* text, float
  * @param text The string to draw 
  * @param len The length of the string
  * @param size The size of the text
- * @param stopLine The line to stop at (starting at 1, 0 = don't stop until the last line)
+ * @param stopNL the number of \n s until it stops (0 = don't stop until the end)
  * @param spacing The spacing of the text
  * @return The width of the text based on the size
 */
-inline size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size,  size_t stopLine, float spacing);
+inline size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing);
 
 /**
  * @brief Draw a text string using the font.
@@ -639,27 +628,23 @@ size_t RFont_text_width(RFont_font* font, const char* text, u32 size) {
    return RFont_text_width_len(font, text, 0, size, 0, 0.0f);
 }
 
-size_t RFont_text_line_width(RFont_font* font, const char* text, u32 size, size_t stopLine) {
-   return RFont_text_width_len(font, text, 0, size, stopLine, 0.0f);
-}
-
 size_t RFont_text_width_spacing(RFont_font* font, const char* text, float spacing, u32 size) {
    return RFont_text_width_len(font, text, 0, size, 0, spacing);
 }
 
-size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, size_t stopLine, float spacing) {
+size_t RFont_text_width_len(RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing) {
    float x = 0;
-
-   char* str;
    size_t y = 1;
 
+   char* str;
+   
    for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {        
       if (*str == '\n') { 
-         if (y == stopLine)
-            break;
+         if (y == stopNL)
+            return x;
          
-         x = 0;
          y++;
+         x = 0;
          continue;
       }
       
