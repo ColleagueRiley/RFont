@@ -1,4 +1,4 @@
-# RFont
+c# RFont
 ![logo](logo.png)
 ![image](Screenshot.png)
 
@@ -15,6 +15,11 @@ The library is designed to be lightweight while also supporting the ablitiy to a
 - OpenGL Legacy 
 - Modern OpenGL (opengl 3.3 +)
 - RGL (OPENGL version abstraction layer)
+
+# Contacts
+- email : ColleagueRiley@gmail.com 
+- discord : ColleagueRiley
+- discord server : https://discord.gg/pXVNgVVbvh
 
 # Documentation 
 For documentation read the `RFont.h` file and check out the example in `./example`
