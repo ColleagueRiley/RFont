@@ -1,4 +1,4 @@
-c# RFont
+# RFont
 ![logo](logo.png)
 ![image](Screenshot.png)
 
