@@ -458,7 +458,7 @@ RFont_font* RFont_font_init(const char* font_name) {
    char* ttf_buffer = (char*)malloc(sizeof(char) * size); 
    fseek(ttf_file, 0U, SEEK_SET);
 
-   fread(ttf_buffer, 1, size, ttf_file);
+   RFONT_UNUSED( fread(ttf_buffer, 1, size, ttf_file) )
 
 
    return RFont_font_init_data((u8*)ttf_buffer, 1);
@@ -589,7 +589,7 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    font->glyph_len++;
 
-   i32 x0, y0, x1, y1, w, h;
+   i32 x0, y0, x1, y1, w = 0, h = 0;
    if (stbtt_GetGlyphBox(&font->info, glyph->src, &x0, &y0, &x1, &y1) == 0)
       return (RFont_glyph){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
