@@ -1,7 +1,9 @@
 CC = gcc
 
-LIBS := -lshell32 -lXInput -lgdi32 -lm -lopengl32 -ggdb -lShcore
+LIBS := -lshell32 -lXInput -lwinmm -lgdi32 -lm -lopengl32 -ggdb -lShcore
 EXT = .exe
+
+FLAGS = -Wall -Werror -Wstrict-prototypes -Wextra
 
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
     detected_OS := Windows
@@ -17,7 +19,7 @@ else
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBS := -lXInput -ggdb -lshell32 -lgdi32 -lShcore -lm -ldwmapi -lopengl32 --static
+	LIBS := -lXInput -ggdb -lwinmm -lshell32 -lgdi32 -lShcore -lm -ldwmapi -lopengl32 --static
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
 	LIBS := -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
@@ -34,11 +36,11 @@ all:
 	make rgl
 
 gl:
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl
+	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl
 rgl:
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl
+	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl
 gl3:
-	$(CC) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3
+	$(CC) $(FLAGS) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3
 
 clean:
 	rm gl3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so gl.exe.so rgl.exe.so -f
@@ -46,9 +48,9 @@ clean:
 debug:
 	make clean
 
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
-	$(CC) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
-	$(CC) main.c $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
+	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
+	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
+	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
 	./gl$(EXT) gl
 	./gl3$(EXT) gl3
