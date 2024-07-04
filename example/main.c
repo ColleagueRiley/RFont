@@ -50,15 +50,12 @@ int main(int argc, char **argv) {
     RFont_font* japanese = RFont_font_init("DroidSansJapanese.ttf");
 
 
-    bool running = true;
-
     glViewport(0, 0, win->r.w, win->r.h);
     
-    while (running) {
+    while (RGFW_window_shouldClose(win) == 0) {
  
         while(RGFW_window_checkEvent(win)) {   
             if (win->event.type == RGFW_quit) {
-                running = false;
                 break;
             }
         }
