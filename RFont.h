@@ -86,23 +86,32 @@ int main () {
 #include <string.h>
 
 #if !defined(u8)
-    #include <stdint.h>
+	#if defined(_MSC_VER) || defined(__SYMBIAN32__)
+		typedef unsigned char 	u8;
+		typedef signed char		i8;
+		typedef unsigned short  u16;
+		typedef signed short 	i16;
+		typedef unsigned int 	u32;
+		typedef signed int		i32;
+		typedef unsigned long	u64;
+		typedef signed long		i64;
+	#else
+		#include <stdint.h>
 
-   typedef uint8_t     u8;
-	typedef int8_t      i8;
-	typedef uint16_t   u16;
-	typedef int16_t    i16;
-	typedef uint32_t   u32;
-	typedef int32_t    i32;
-	typedef uint64_t   u64;
-	typedef int64_t    i64;
-   typedef u8 b8;
+		typedef uint8_t     u8;
+		typedef int8_t      i8;
+		typedef uint16_t   u16;
+		typedef int16_t    i16;
+		typedef uint32_t   u32;
+		typedef int32_t    i32;
+		typedef uint64_t   u64;
+		typedef int64_t    i64;
+	#endif
 #endif
 
-#ifndef RFONT_UNUSED
-#define RFONT_UNUSED(x) if (x){}
+#if !defined(b8)
+	typedef u8 b8;
 #endif
-
 /* 
 You can define these yourself if 
 you want to change anything
@@ -134,6 +143,10 @@ you want to change anything
 
 #ifndef RFONT_VSNPRINTF
 #define RFONT_VSNPRINTF vsnprintf
+#endif
+
+#ifndef RFONT_UNUSED
+#define RFONT_UNUSED(x) (void) (x);
 #endif
 
 /* make sure RFont declares aren't declared twice */
@@ -465,7 +478,7 @@ RFont_font* RFont_font_init(const char* font_name) {
    char* ttf_buffer = (char*)malloc(sizeof(char) * size); 
    fseek(ttf_file, 0U, SEEK_SET);
 
-   RFONT_UNUSED( fread(ttf_buffer, 1, size, ttf_file) )
+   RFONT_UNUSED(fread(ttf_buffer, 1, size, ttf_file))
 
 
    return RFont_font_init_data((u8*)ttf_buffer, 1);
