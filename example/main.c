@@ -26,7 +26,7 @@
 
 int main(int argc, char **argv) {
     #if !defined(RFONT_RENDER_LEGACY)
-    RGFW_setGLVersion(3, 3);
+    RGFW_setGLVersion(RGFW_GL_CORE, 3, 3);
     #endif
 
     RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", RGFW_RECT(200, 200, 1000, 500), 0);
