@@ -16,6 +16,6 @@ jobs:
     - name: apt-update
       run: sudo apt-get update
     - name: apt
-      run: sudo apt-get install mesa-common-dev libglx-dev libxcursor-dev libxrandr-dev      
+      run: sudo apt-get install mesa-common-dev libglx-dev libxcursor-dev libxrandr-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev libgles2-mesa-dev    
     - name: make
       run: cd example && make
