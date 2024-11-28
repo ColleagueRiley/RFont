@@ -7,6 +7,8 @@
 #define RGL_OPENGL_LEGACY
 #endif
 
+#include "RGFW.h"
+
 #ifdef RFONT_RENDER_RGL
 #include "RGL.h"
 #endif
@@ -17,10 +19,8 @@
 #include "ext/rglLoad.h"
 #endif
 
-
 #include "RFont.h"
 
-#include "RGFW.h"
 
 #include <stdbool.h>
 
