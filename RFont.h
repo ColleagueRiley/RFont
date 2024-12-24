@@ -118,7 +118,7 @@ you want to change anything
 */
 
 #ifndef RFont_texture
-typedef RFont_texture u32;
+typedef u32 RFont_texture;
 #endif
 
 #ifndef RFONT_MAX_GLYPHS
