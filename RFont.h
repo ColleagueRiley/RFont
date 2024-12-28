@@ -134,6 +134,10 @@ typedef u32 RFont_texture;
 #define RFONT_ATLAS_WIDTH 6000
 #endif
 
+#ifndef RFONT_ATLAS_RESIZE_LEN
+#define RFONT_ATLAS_RESIZE_LEN 3000
+#endif
+
 #ifndef RFONT_ATLAS_HEIGHT
 #define RFONT_ATLAS_HEIGHT 400
 #endif
@@ -335,6 +339,7 @@ inline RFont_area RFont_draw_text_len(RFont_font* font, const char* text, size_t
 inline void RFont_render_set_color(float r, float g, float b, float a); /* set the current rendering color */
 inline void RFont_render_init(void); /* any initalizations the renderer needs to do */
 inline RFont_texture RFont_create_atlas(u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
+inline RFont_texture RFont_resize_atlas(RFont_texture atlas, u32 atlasWidth, u32 atlasHeight); /* resize atlas based on given size */
 inline void RFont_bitmap_to_atlas(RFont_texture atlas, u8* bitmap, float x, float y, float w, float h); /* add the given bitmap to the texture based on the given coords and size data */
 inline void RFont_render_text(RFont_texture atlas, float* verts, float* tcoords, size_t nverts); /* render the text, using the vertices, atlas texture, and texture coords given. */
 inline void RFont_render_free(RFont_texture atlas); /* free any memory the renderer might need to free */
@@ -642,11 +647,8 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    #ifndef RFONT_NO_GRAPHICS
 
-   if (font->atlasX + glyph->w >= RFONT_ATLAS_WIDTH) {
-      printf("RFont Runtime Error: Atlas Out of Space\n");
-      RFONT_FREE(bitmap);
-      return (RFont_glyph){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-   }
+   if (font->atlasX + glyph->w >= RFONT_ATLAS_WIDTH)
+      font->atlas = RFont_resize_atlas(font->atlas, RFONT_ATLAS_WIDTH + RFONT_ATLAS_RESIZE_LEN, RFONT_ATLAS_HEIGHT);
 
    RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, glyph->w, glyph->h);
    #endif
@@ -931,6 +933,22 @@ RFont_texture RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
    return id;
 }
 
+RFont_texture RFont_resize_atlas(RFont_texture atlas, u32 newWidth, u32 newHeight) {
+   GLuint newAtlas;
+   glGenTextures(1, &newAtlas);
+   glBindTexture(GL_TEXTURE_2D, newAtlas);
+
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, newWidth, newHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+   glBindTexture(GL_TEXTURE_2D, atlas);
+   glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, newWidth, newHeight);
+
+   glDeleteTextures(1, atlas);
+
+   glBindTexture(GL_TEXTURE_2D, 0);
+
+   return newAtlas;
+}
 #ifndef GL_UNPACK_ROW_LENGTH
 #define GL_UNPACK_ROW_LENGTH 0x0CF2
 #define GL_UNPACK_SKIP_PIXELS 0x0CF4
