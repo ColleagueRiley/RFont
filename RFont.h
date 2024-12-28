@@ -477,8 +477,8 @@ void RFont_init(size_t width, size_t height) {
     RFont_render_init();
     #endif
 
-   RFont_verts = RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
-   RFont_tcoords = RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
+   RFont_verts = (float*)RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
+   RFont_tcoords = (float*)RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
 }
 
 #ifndef RFONT_NO_STDIO
@@ -552,7 +552,7 @@ decode utf8 character to codepoint
 inline static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte);
 
 static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
-   static const uint8_t utf8d[] = {
+   static const u8 utf8d[] = {
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
@@ -569,7 +569,7 @@ static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
       1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
    };
 
-   uint32_t type = utf8d[byte];
+   u32 type = utf8d[byte];
 
    *codep = (*state != RFONT_UTF8_ACCEPT) ?
       (byte & 0x3fu) | (*codep << 6) :
@@ -688,7 +688,7 @@ RFont_area RFont_text_area_len(RFont_font* font, const char* text, size_t len, u
    for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {        
       if (*str == '\n') { 
          if (y == stopNL)
-            return (RFont_area){(u32)x, y * size};
+            return (RFont_area){(u32)x, (u32)y * size};
          
          y++;
          x = 0;
@@ -821,13 +821,13 @@ RFont_area RFont_draw_text_len(RFont_font* font, const char* text, size_t len, f
    return (RFont_area){(u32)(x - startX), (u32)(y - startY) + (-font->descent * scale)};
 }
 
+#if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
+
 #ifndef __APPLE__
 #include <GL/gl.h>
 #else
 #include <OpenGL/gl.h>
 #endif
-
-#if !defined(RFONT_NO_OPENGL) && !defined(RFONT_NO_GRAPHICS)
 
 #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
 #define GL_GLEXT_PROTOTYPES
