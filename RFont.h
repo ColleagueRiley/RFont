@@ -641,6 +641,13 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
    glyph->y1 = floor(-y1 * scale);
 
    #ifndef RFONT_NO_GRAPHICS
+
+   if (font->atlasX + glyph->w >= RFONT_ATLAS_WIDTH) {
+      printf("RFont Runtime Error: Atlas Out of Space\n");
+      RFONT_FREE(bitmap);
+      return (RFont_glyph){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+   }
+
    RFont_bitmap_to_atlas(font->atlas, bitmap, font->atlasX, 0, glyph->w, glyph->h);
    #endif
 
