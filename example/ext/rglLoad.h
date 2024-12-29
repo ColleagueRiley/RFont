@@ -60,7 +60,15 @@ typedef void (*glUniformMatrix4fvPROC)(GLint location, GLsizei count, GLboolean 
 typedef void (*glTexImage2DPROC)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
 typedef void (*glActiveTexturePROC) (GLenum texture);
 typedef void (*glDebugMessageCallbackPROC)(void* callback, const void*);
+typedef void (*glGenFramebuffersPROC)(GLsizei n, GLuint *framebuffers);
+typedef void (*glBindFramebufferPROC)(GLenum target, GLuint framebuffer);
+typedef void (*glFramebufferTexture2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (*glDeleteFramebuffersPROC)(GLsizei n, const GLuint *framebuffers);
 
+glGenFramebuffersPROC glGenFramebuffersSRC = NULL;
+glBindFramebufferPROC glBindFramebufferSRC = NULL;
+glFramebufferTexture2DPROC glFramebufferTexture2DSRC = NULL;
+glDeleteFramebuffersPROC glDeleteFramebuffersSRC = NULL;
 glShaderSourcePROC glShaderSourceSRC = NULL;
 glCreateShaderPROC glCreateShaderSRC = NULL;
 glCompileShaderPROC glCompileShaderSRC = NULL;
@@ -122,6 +130,10 @@ glDebugMessageCallbackPROC glDebugMessageCallbackSRC = NULL;
 #define glGetUniformLocation glGetUniformLocationSRC
 #define glUniformMatrix4fv glUniformMatrix4fvSRC
 #define glDebugMessageCallback glDebugMessageCallbackSRC
+#define glGenFramebuffers glGenFramebuffersSRC
+#define glBindFramebuffer glBindFramebufferSRC
+#define glFramebufferTexture2D glFramebufferTexture2DSRC
+#define glDeleteFramebuffers glDeleteFramebuffersSRC
 
 extern int RGL_loadGL3(RGLloadfunc proc);
 
@@ -161,6 +173,10 @@ int RGL_loadGL3(RGLloadfunc proc) {
     RGL_PROC_DEF(proc, glUniformMatrix4fv);
     RGL_PROC_DEF(proc, glActiveTexture);
     RGL_PROC_DEF(proc, glDebugMessageCallback);
+    RGL_PROC_DEF(proc, glGenFramebuffers);
+    RGL_PROC_DEF(proc, glBindFramebuffer);
+    RGL_PROC_DEF(proc, glFramebufferTexture2D);
+    RGL_PROC_DEF(proc, glDeleteFramebuffers);
 
     if (
         glShaderSourceSRC == NULL ||
