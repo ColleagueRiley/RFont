@@ -340,7 +340,7 @@ inline RFont_area RFont_draw_text_len(RFont_font* font, const char* text, size_t
 inline void RFont_render_set_color(float r, float g, float b, float a); /* set the current rendering color */
 inline void RFont_render_init(void); /* any initalizations the renderer needs to do */
 inline RFont_texture RFont_create_atlas(u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
-inline b8 RFont_resize_atlas(RFont_texture* atlas, u32 atlasWidth, u32 atlasHeight); /* resize atlas based on given size, returns 1 if successful */
+inline RFont_texture RFont_resize_atlas(RFont_texture atlas, u32 atlasWidth, u32 atlasHeight); /* resize atlas based on given size, returns 1 if successful */
 inline void RFont_bitmap_to_atlas(RFont_texture atlas, u8* bitmap, float x, float y, float w, float h); /* add the given bitmap to the texture based on the given coords and size data */
 inline void RFont_render_text(RFont_texture atlas, float* verts, float* tcoords, size_t nverts); /* render the text, using the vertices, atlas texture, and texture coords given. */
 inline void RFont_render_free(RFont_texture atlas); /* free any memory the renderer might need to free */
@@ -651,7 +651,7 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
    #ifndef RFONT_NO_GRAPHICS
 
    while (font->atlasX + glyph->w >= font->atlasWidth) {
-      if (RFont_resize_atlas(&font->atlas, font->atlasWidth + RFONT_ATLAS_RESIZE_LEN, RFONT_ATLAS_HEIGHT)) {
+      if (RFont_resize_atlas(font->atlas, font->atlasWidth + RFONT_ATLAS_RESIZE_LEN, RFONT_ATLAS_HEIGHT)) {
          font->atlasWidth = font->atlasWidth + RFONT_ATLAS_RESIZE_LEN;
       }
    }
