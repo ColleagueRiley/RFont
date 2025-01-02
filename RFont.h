@@ -202,6 +202,14 @@ inline void RFont_update_framebuffer(size_t width, size_t height);
  * @return The `RFont_font` created using the TTF file data.
 */
 inline RFont_font* RFont_font_init(const char* font_name);
+/**
+ * @brief Init font stucture with a TTF file path.
+ * @param font_name The TTF file path.
+ * @param atlasWidth The width of the atlas texture.
+ * @param atlasHeight The height of the atlas texture. (This should == the max text size)
+ * @return The `RFont_font` created using the TTF file data.
+*/
+inline RFont_font* RFont_font_init_pro(const char* font_name, size_t atlasWidth, size_t atlasHeight);
 #endif
 
 
@@ -212,6 +220,16 @@ inline RFont_font* RFont_font_init(const char* font_name);
  * @return The `RFont_font` created from the data.
 */
 inline RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free);
+
+/**
+ * @brief Init font stucture with raw TTF data.
+ * @param font_data The raw TTF data.
+ * @param atlasWidth The width of the atlas texture.
+ * @param atlasHeight The height of the atlas texture. (This should == the max text size)
+ * @param auto_free If the memory should be automatically freed by `RFont_font_free`.
+ * @return The `RFont_font` created from the data.
+*/
+inline RFont_font* RFont_font_init_data_pro(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight);
 
 /**
  * @brief Free data from the font stucture, including the stucture itself
@@ -483,6 +501,10 @@ void RFont_init(size_t width, size_t height) {
 
 #ifndef RFONT_NO_STDIO
 RFont_font* RFont_font_init(const char* font_name) {
+   return RFont_font_init_pro(font_name, RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
+}
+
+RFont_font* RFont_font_init_pro(const char* font_name, size_t atlasWidth, size_t atlasHeight) {
    FILE* ttf_file = fopen(font_name, "rb");
 
    fseek(ttf_file, 0U, SEEK_END);
@@ -500,6 +522,10 @@ RFont_font* RFont_font_init(const char* font_name) {
 #endif
 
 RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free) {
+   return RFont_font_init_data_pro(font_data, auto_free, RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
+}
+
+RFont_font* RFont_font_init_data_pro(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight);
    RFont_font* font = (RFont_font*)RFONT_MALLOC(sizeof(RFont_font));
 
    stbtt_InitFont(&font->info, font_data, 0);
@@ -512,7 +538,7 @@ RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free) {
  
 
    #ifndef RFONT_NO_GRAPHICS
-   font->atlas = RFont_create_atlas(RFONT_ATLAS_WIDTH, RFONT_ATLAS_HEIGHT);
+   font->atlas = RFont_create_atlas(atlasWidth, atlasHeight);
    #endif
    font->atlasX = 0;
    font->glyph_len = 0;
