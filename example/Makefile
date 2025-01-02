@@ -5,6 +5,8 @@ EXT = .exe
 
 FLAGS = -Wall -Werror -Wstrict-prototypes -Wextra
 
+GLES3=0
+
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
     detected_OS := Windows
 else
@@ -28,22 +30,35 @@ endif
 ifeq ($(detected_OS),Linux)
     LIBS := -I./include -lXrandr -lX11 -lm -lGL
 	EXT =
+	GLES3 = 1
+endif
+ifeq ($(CC),emcc)
+	EXPORTED_JS = -s EXPORTED_RUNTIME_METHODS="['stringToNewUTF8']"
+	GET_FILES =  --preload-file DejaVuSans.ttf@DejaVuSans.ttf \
+				--preload-file DroidSansJapanese.ttf@DroidSansJapanese.ttf
+	LIBS = $(GET_FILES) -s WASM=1 -s ASYNCIFY -s GL_SUPPORT_EXPLICIT_SWAP_CONTROL=1 -s FULL_ES3 -s USE_WEBGL2 $(EXPORTED_JS)
+	EXT = .js
+	GLES3=1
 endif
 
 all:
 	make gl
 	make gl3
 	make rgl
+	make es3
 
 gl:
-	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl
+	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl$(EXT)
 rgl:
-	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl
+	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl$(EXT)
 gl3:
-	$(CC) $(FLAGS) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3
-
+	$(CC) $(FLAGS) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3$(EXT)
+es3:
+ifeq ($(GLES3),1)
+	$(CC) $(FLAGS) main.c $(LIBS) -D RFONT_RENDER_ES3 -lEGL -O3 -I./ext -I../ -Wall -o es3$(EXT)
+endif
 clean:
-	rm gl3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so gl.exe.so rgl.exe.so -f
+	rm gl3$(EXT) es3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so es3.exe.so gl.exe.so rgl.exe.so -f
 
 debug:
 	make clean
@@ -52,6 +67,14 @@ debug:
 	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
 	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
 
+ifeq ($(GLES3),1)
+	$(CC) main.c $(FLAGS) $(LIBS) -lEGL -I./ext -I../ -Wall -D RFONT_RENDER_ES3 -o es3 -D RFONT_DEBUG
+endif
+
 	./gl$(EXT) gl
 	./gl3$(EXT) gl3
+
+ifeq ($(GLES3),1)
+	./es3$(EXT) es3
+endif
 	./rgl$(EXT) rgl

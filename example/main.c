@@ -7,13 +7,21 @@
 #define RGL_OPENGL_LEGACY
 #endif
 
+#ifdef RFONT_RENDER_ES3
+#ifndef __EMSCRIPTEN__
+#define RGFW_OPENGL_ES3
+#endif
+
+#include <GLES3/gl3.h>
+#endif
+
 #include "RGFW.h"
 
 #ifdef RFONT_RENDER_RGL
 #include "RGL.h"
 #endif
 
-#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
+#if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL) && !defined(RFONT_RENDER_ES3)
 #define RGL_LOAD_IMPLEMENTATION
 
 #include "ext/rglLoad.h"
@@ -35,7 +43,7 @@ int main(int argc, char **argv) {
     rglInit((void*)RGFW_getProcAddress);    
     #endif
 
-    #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL)
+    #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_RGL) && !defined(RFONT_RENDER_ES3)
     if (RGL_loadGL3((RGLloadfunc)RGFW_getProcAddress)) {
         printf("Failed to load OpenGL, defaulting to OpenGL 2\n");
         RFont_render_legacy(true);
