@@ -55,7 +55,9 @@ RFont_glyph glyphFallback(RFont_font* font, u32 codepoint, size_t size) {
 
 int main(int argc, char **argv) {
     #if !defined(RFONT_RENDER_LEGACY)
-    RGFW_setGLVersion(RGFW_GL_CORE, 3, 3);
+        RGFW_setGLHint(RGFW_glProfile, RGFW_glCore);
+        RGFW_setGLHint(RGFW_glMinor, 3);
+        RGFW_setGLHint(RGFW_glMajor, 3);
     #endif
 
     RGFW_window* win = RGFW_createWindow((argc > 1) ? argv[1] : "window", RGFW_RECT(200, 200, 1000, 500), 0);
