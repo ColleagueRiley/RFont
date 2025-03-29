@@ -24,7 +24,7 @@ ifeq ($(detected_OS),Windows)
 	LIBS := -lXInput -ggdb -lwinmm -lshell32 -lgdi32 -lShcore -lm -ldwmapi -lopengl32 --static
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
-	LIBS := -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -w
+	LIBS := -lm -framework Foundation -framework AppKit -framework OpenGL -framework CoreVideo -framework IOKit -w
 	EXT = 
 endif
 ifeq ($(detected_OS),Linux)
