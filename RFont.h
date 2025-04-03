@@ -542,6 +542,7 @@ RFont_font* RFont_font_init(const char* font_name) {
 
 RFont_font* RFont_font_init_pro(const char* font_name, size_t atlasWidth, size_t atlasHeight) {
    FILE* ttf_file = fopen(font_name, "rb");
+   if (ttf_file == NULL) return NULL;
 
    fseek(ttf_file, 0U, SEEK_END);
    size_t size = ftell(ttf_file);
