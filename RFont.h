@@ -29,6 +29,10 @@ make sure
 
 is in exactly one of your files or arguments
 
+#define RFONT_INT_DEFINED - int types are already defined 
+#define RFONT_C89 - uses cints instead of stdint.h and __inline instead of inline 
+#define RFONT_INLINE x - set your own inline 
+
 #define RFONT_NO_OPENGL - do not define graphics functions (that use opengl)
 #define RFONT_NO_STDIO - do not include stdio.h
 #define RFONT_EXTERNAL_STB - load stb_truetype from stb_truetype.h instead of using the internal version
@@ -75,12 +79,20 @@ int main () {
    ...
 }
 */
-#define RFONT_API
+
+#ifndef RFONT_INLINE
+    #ifdef RFONT_C89
+        #define RFONT_INLINE 
+    #else
+        #define RFONT_INLINE inline
+    #endif
+#endif
+
 #ifndef RFONT_API
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-        #define RFONT_API extern inline 
+        #define RFONT_API extern RFONT_INLINE 
     #endif
 #endif
 
@@ -614,9 +626,9 @@ decode utf8 character to codepoint
 #define RFONT_UTF8_ACCEPT 0
 #define RFont_UTF8_REJECT 12
 
-RFONT_API static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte);
+RFONT_API u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte);
 
-static u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
+u32 RFont_decode_utf8(u32* state, u32* codep, u32 byte) {
    static const u8 utf8d[] = {
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 00..1f */
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 20..3f */
