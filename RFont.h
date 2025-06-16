@@ -107,9 +107,43 @@ int main () {
 #define RFONT_FREE free
 #endif
 
-#include <math.h>
-#include <assert.h>
-#include <string.h>
+#if !defined(RFONT_MEMCPY) || !defined(RFONT_MEMSET)
+	#include <string.h>
+#endif
+
+#ifndef RFONT_MEMSET
+    #define RFONT_MEMSET(ptr, value, num) memset(ptr, value, num)
+#endif
+
+#ifndef RFONT_MEMCPY
+	#define RFONT_MEMCPY(dist, src, len) memcpy(dist, src, len)
+#endif
+
+#ifndef RFONT_ASSERT
+    #include <assert.h>
+    #define RFONT_ASSERT(x) assert(x)
+#endif
+
+#if !defined(RFONT_FLOOR) || !defined(RFONT_CEIL) || !defined(RFONT_FABS) || !defined(RFONT_SQRT)
+    #include <math.h>
+#endif
+
+#ifndef RFONT_FLOOR
+    #define RFONT_FLOOR(x) floor(x)
+#endif
+
+#ifndef RFONT_CEIL
+    #define RFONT_CEIL(x) ceil(x)
+#endif
+
+#ifndef RFONT_FABS
+    #define RFONT_FABS(x) fabs(x)
+#endif
+
+#ifndef RFONT_SQRT
+    #define RFONT_SQRT(x) sqrt(x)
+#endif
+
 #if defined(__STDC__) && !defined(__STDC_VERSION__)
     #define RFONT_C89
 #endif
@@ -428,13 +462,6 @@ RFONT_API void RFont_render_legacy(u8 legacy);
 #define RFONT_EXTERNAL_STB
 #endif
 
-#if defined(RFONT_EXTERNAL_STB)
-#ifndef RFONT_EXTERNAL_STB_IMPLEMENTATION
-    #define STB_TRUETYPE_IMPLEMENTATION
-#endif
-#include "stb_truetype.h"
-#endif
-
 #ifndef RFONT_GET_TEXPOSX
 #define RFONT_GET_TEXPOSX(x, w) (float)((float)(x) / (float)(w))
 #define RFONT_GET_TEXPOSY(y, h) (float)((float)(y) / (float)(h))
@@ -492,6 +519,19 @@ RFONT_API int rstbtt_FindGlyphIndex(const rstbtt_fontinfo *info, int unicode_cod
 
 RFONT_API int  rstbtt_GetGlyphKernAdvance(const rstbtt_fontinfo *info, int glyph1, int glyph2);
 RFONT_API int  rstbtt_GetGlyphBox(const rstbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
+#else
+#ifndef RFONT_EXTERNAL_STB_IMPLEMENTATION
+    #define STB_TRUETYPE_IMPLEMENTATION
+#endif
+#include "stb_truetype.h"
+
+typedef struct stbtt_fontinfo rstbtt_fontinfo;
+
+#define rstbtt_InitFont stbtt_InitFont 
+#define rstbtt_GetGlyphBitmapSubpixel stbtt_GetGlyphBitmapSubpixel 
+#define rstbtt_FindGlyphIndex stbtt_FindGlyphIndex 
+#define rstbtt_GetGlyphKernAdvance stbtt_GetGlyphKernAdvance
+#define rstbtt_GetGlyphBox stbtt_GetGlyphBox
 #endif /* RFONT_EXTERNAL_STB */
 
 /* 
@@ -680,7 +720,7 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 
    if (RFont_decode_utf8(&utf8state, &codepoint, (u8)ch) != RFONT_UTF8_ACCEPT) {
       RFont_glyph g;
-      memset(&g, 0, sizeof(RFont_glyph));
+      RFONT_MEMSET(&g, 0, sizeof(RFont_glyph));
       return g;
    }
 
@@ -704,7 +744,7 @@ RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t 
       if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
          return font->glyphs[i];
     
-   memset(&glyphNull, 0, sizeof(glyphNull));
+   RFONT_MEMSET(&glyphNull, 0, sizeof(glyphNull));
    if (i < sizeof(font->glyphs)) {
        glyph = &font->glyphs[i];
    } else {
@@ -993,60 +1033,13 @@ RFont_area RFont_draw_text_len(RFont_font* font, const char* text, size_t len, f
 #define GL_CLAMP_TO_EDGE			0x812F
 #endif
 
-#ifdef RFONT_DEBUG
-
-#ifndef GL_DEBUG_TYPE_ERROR
-#define GL_DEBUG_TYPE_ERROR               0x824C
-#define GL_DEBUG_OUTPUT                   0x92E0
-#define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
-#define GL_COMPILE_STATUS                 0x8B81
-#define GL_LINK_STATUS                    0x8B82
-#define GL_INFO_LOG_LENGTH                0x8B84 
-#endif
-
-void RFont_debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam) {
-    RFONT_UNUSED(source) RFONT_UNUSED(id) RFONT_UNUSED(severity) RFONT_UNUSED(length) RFONT_UNUSED(userParam)
-
-    if (type != GL_DEBUG_TYPE_ERROR)
-        return;
-
-    printf("OpenGL Debug Message: %s\n", message);
-}
-
-void RFont_opengl_getError(void) {
-    GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-         switch (err) {
-            case GL_INVALID_ENUM:
-                  printf("OpenGL error: GL_INVALID_ENUM\n");
-                  break;
-            case GL_INVALID_VALUE:
-                  printf("OpenGL error: GL_INVALID_VALUE\n");
-                  break;
-            case GL_INVALID_OPERATION:
-                  printf("OpenGL error: GL_INVALID_OPERATION\n");
-                  break;
-            case GL_STACK_OVERFLOW:
-                  printf("OpenGL error: GL_STACK_OVERFLOW\n");
-                  break;
-            case GL_STACK_UNDERFLOW:
-                  printf("OpenGL error: GL_STACK_UNDERFLOW\n");
-                  break;	
-            default:
-                  printf("OpenGL error: Unknown error code 0x%x\n", err);
-                  break;
-         }
-         exit(1);
-    }
-}
-
-#endif
-
 RFont_texture RFont_create_atlas(u32 atlasWidth, u32 atlasHeight) {
    static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
    u32 id = 0;
    
-   u8* data = (u8*)calloc(atlasWidth * atlasHeight * 4, sizeof(u8));
+   u8* data = (u8*)RFONT_MALLOC(atlasWidth * atlasHeight * 4);
+   memset(data, 0, atlasWidth * atlasHeight * 4);
+   
    #if defined(RFONT_DEBUG) && !defined(RFONT_RENDER_LEGACY)
    glEnable(GL_DEBUG_OUTPUT);
    #endif
@@ -1205,36 +1198,6 @@ typedef struct {
 RFont_gl_info RFont_gl = { 0 };
 
 float RFont_color[4] = {0, 0, 0, 1};
-
-#ifdef RFONT_DEBUG
-RFONT_API void RFont_debug_shader(u32 src, const char* shader, const char* action);
-void RFont_debug_shader(u32 src, const char* shader, const char* action) {
-    GLint status;
-    if (action[0] == 'l')
-        glGetProgramiv(src, GL_LINK_STATUS, &status);
-    else
-        glGetShaderiv(src, GL_COMPILE_STATUS, &status);
-
-    if (status == GL_TRUE) 
-        printf("%s Shader %s successfully.\n", shader, action);
-    else {
-        printf("%s Shader failed to %s.\n", shader, action);
-
-        if (action[0] == 'c') {
-            GLint infoLogLength;
-            glGetShaderiv(src, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-            if (infoLogLength > 0) {
-                GLchar infoLog[512]; 
-                glGetShaderInfoLog(src, 512, NULL, infoLog);
-                printf("%s Shader info log:\n%s\n", shader, infoLog);
-            }
-        }
-        
-        RFont_opengl_getError();
-    }
-}
-#endif
 
 #define RFONT_MULTILINE_STR(s) #s
 
@@ -1984,8 +1947,8 @@ RFONT_API int rstbtt__GetGlyphShapeTT(const rstbtt_fontinfo *info, int glyph_ind
                if (comp_verts) RFONT_FREE(comp_verts);
                return 0;
             }
-            if (num_vertices > 0) memcpy(tmp, vertices, (size_t)num_vertices * sizeof(rstbtt_vertex));
-            memcpy(tmp+num_vertices, comp_verts, (size_t)comp_num_verts * sizeof(rstbtt_vertex));
+            if (num_vertices > 0) RFONT_MEMCPY(tmp, vertices, (size_t)num_vertices * sizeof(rstbtt_vertex));
+            RFONT_MEMCPY(tmp+num_vertices, comp_verts, (size_t)comp_num_verts * sizeof(rstbtt_vertex));
             if (vertices) RFONT_FREE(vertices);
             vertices = tmp;
             RFONT_FREE(comp_verts);
@@ -2961,8 +2924,8 @@ RFONT_API void rstbtt__rasterize_sorted_edges(rstbtt__bitmap *result, rstbtt__ed
       float scan_y_bottom = (float)y + 1.0f;
       rstbtt__active_edge **step = &active;
 
-      memset(scanline , 0, (size_t)result->w * sizeof(scanline[0]));
-      memset(scanline2, 0, (size_t)(result->w + 1) * sizeof(scanline[0]));
+      RFONT_MEMSET(scanline , 0, (size_t)result->w * sizeof(scanline[0]));
+      RFONT_MEMSET(scanline2, 0, (size_t)(result->w + 1) * sizeof(scanline[0]));
 
       /* update all active edges;
         remove all active edges that terminate before the top of this scanline */
