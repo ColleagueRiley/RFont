@@ -3,8 +3,10 @@ CC = gcc
 LIBS := -lshell32 -lXInput -lwinmm -lgdi32 -lm -lopengl32 -ggdb -lShcore
 EXT = .exe
 
-FLAGS = -Wall -Werror -Wstrict-prototypes -Wextra
 
+WARNINGS = -Werror -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wold-style-definition -Wconversion -Wsign-conversion -Wshadow -Wpointer-arith -Wvla -Wcast-align -Wstrict-overflow -Wnested-externs -Wstrict-aliasing -Wredundant-decls -Winit-self -Wmissing-noreturn 
+
+FLAGS = $(WARNINGS) -std=c89 
 GLES3=0
 
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
@@ -41,40 +43,30 @@ ifeq ($(CC),emcc)
 	GLES3=1
 endif
 
-all:
-	make gl
-	make gl3
-	make rgl
-	make es3
+all: gl gl3 es3
 
-gl:
-	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl$(EXT)
-rgl:
-	$(CC) $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -O3 -o rgl$(EXT)
-gl3:
-	$(CC) $(FLAGS) main.c $(LIBS) -O3 -I./ext -I../ -Wall -o gl3$(EXT)
-es3:
+RGFW.o: ./ext/RGFW.h ./ext/RGFW.c
+	$(CC) -c ext/RGFW.c 
+
+RGFW_egl.o: ./ext/RGFW.h ./ext/RGFW.c
+	$(CC) -c ext/RGFW.c -D RFONT_RENDER_ES3 -o RGFW_egl.o
+
+gl: ../RFont.h RGFW.o
+	$(CC) $(FLAGS) main.c RGFW.o $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl$(EXT)
+gl3: ../RFont.h RGFW.o  
+	$(CC) $(FLAGS) main.c RGFW.o $(LIBS) -O3 -I./ext -I../ -Wall -o gl3$(EXT)
+es3: ../RFont.h RGFW_egl.o  
 ifeq ($(GLES3),1)
-	$(CC) $(FLAGS) main.c $(LIBS) -D RFONT_RENDER_ES3 -lEGL -O3 -I./ext -I../ -Wall -o es3$(EXT)
-endif
-clean:
-	rm gl3$(EXT) es3$(EXT) gl$(EXT) rgl$(EXT) gl3.exe.so es3.exe.so gl.exe.so rgl.exe.so -f
-
-debug:
-	make clean
-
-	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -o gl -D RFONT_DEBUG
-	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -D RFONT_RENDER_RGL -Wall -o rgl -D RFONT_DEBUG
-	$(CC) main.c $(FLAGS) $(LIBS) -I./ext -I../ -Wall -o gl3 -D RFONT_DEBUG
-
-ifeq ($(GLES3),1)
-	$(CC) main.c $(FLAGS) $(LIBS) -lEGL -I./ext -I../ -Wall -D RFONT_RENDER_ES3 -o es3 -D RFONT_DEBUG
+	$(CC) $(FLAGS) main.c RGFW_egl.o $(LIBS) -D RFONT_RENDER_ES3 -lEGL -O3 -I./ext -I../ -Wall -o es3$(EXT)
 endif
 
+clean: 
+	rm gl3$(EXT) es3$(EXT) gl$(EXT) gl3.exe.so es3.exe.so gl.exe.so *.o -f
+
+debug: gl gl3 es3 
 	./gl$(EXT) gl
 	./gl3$(EXT) gl3
 
 ifeq ($(GLES3),1)
 	./es3$(EXT) es3
 endif
-	./rgl$(EXT) rgl

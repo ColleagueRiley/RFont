@@ -11,10 +11,9 @@ The library is designed to be lightweight while also supporting the ablitiy to a
 ![cplus workflow windows](https://github.com/ColleagueRiley/RFont/actions/workflows/macos.yml/badge.svg)
 
 # Native supported rendering APIs
-
 - OpenGL Legacy 
 - Modern OpenGL (opengl 3.3 +)
-- RGL (OPENGL version abstraction layer)
+- OpenGL ES 
 
 # Contacts
 - email : ColleagueRiley@gmail.com 

@@ -209,14 +209,15 @@ int RGL_loadGL3(RGLloadfunc proc) {
         glUniformMatrix4fvSRC == NULL        
     )
         return 1;
-
+{
     GLuint vao;
     glGenVertexArraysSRC(1, &vao);
     
     if (vao == 0) 
         return 1;
-    
+
     glDeleteVertexArraysSRC(1, &vao);
+}
     return 0;
 }
 #endif
