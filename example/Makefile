@@ -49,7 +49,11 @@ RGFW.o: ./ext/RGFW.h ./ext/RGFW.c
 	$(CC) -c ext/RGFW.c 
 
 RGFW_egl.o: ./ext/RGFW.h ./ext/RGFW.c
+ifeq ($(GLES3),1)
 	$(CC) -c ext/RGFW.c -D RFONT_RENDER_ES3 -o RGFW_egl.o
+else
+	echo gles is disabled 
+endif
 
 gl: ../RFont.h RGFW.o
 	$(CC) $(FLAGS) main.c RGFW.o $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl$(EXT)
@@ -58,6 +62,8 @@ gl3: ../RFont.h RGFW.o
 es3: ../RFont.h RGFW_egl.o  
 ifeq ($(GLES3),1)
 	$(CC) $(FLAGS) main.c RGFW_egl.o $(LIBS) -D RFONT_RENDER_ES3 -lEGL -O3 -I./ext -I../ -Wall -o es3$(EXT)
+else
+	echo gles is disabled 
 endif
 
 clean: 
