@@ -458,10 +458,6 @@ RFONT_API void RFont_render_legacy(u8 legacy);
 
 #ifdef RFONT_IMPLEMENTATION
 
-#ifdef RFONT_EXTERNAL_STB_IMPLEMENTATION
-#define RFONT_EXTERNAL_STB
-#endif
-
 #ifndef RFONT_GET_TEXPOSX
 #define RFONT_GET_TEXPOSX(x, w) (float)((float)(x) / (float)(w))
 #define RFONT_GET_TEXPOSY(y, h) (float)((float)(y) / (float)(h))
@@ -519,9 +515,16 @@ RFONT_API int rstbtt_FindGlyphIndex(const rstbtt_fontinfo *info, int unicode_cod
 
 RFONT_API int  rstbtt_GetGlyphKernAdvance(const rstbtt_fontinfo *info, int glyph1, int glyph2);
 RFONT_API int  rstbtt_GetGlyphBox(const rstbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
+
+#undef RFONT_API 
+#define RFONT_API 
 #else
+#ifdef RFONT_EXTERNAL_STB_IMPLEMENTATION
+    #define RFONT_EXTERNAL_STB
+#endif
+
 #ifndef RFONT_EXTERNAL_STB_IMPLEMENTATION
-    #define STB_TRUETYPE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
 #endif
 #include "stb_truetype.h"
 
