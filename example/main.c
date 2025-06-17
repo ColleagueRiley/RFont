@@ -29,9 +29,9 @@ RFont_glyph glyphFallback(RFont_font* font, u32 codepoint, size_t size) {
     RFONT_UNUSED(font); RFONT_UNUSED(size);
 
    if (font == japanese)
-      g = RFont_font_add_codepointPro(english, codepoint, size, 0);
+      g = RFont_font_add_codepoint_ex(english, codepoint, size, 0);
    else
-      g = RFont_font_add_codepointPro(japanese, codepoint, size, 0);
+      g = RFont_font_add_codepoint_ex(japanese, codepoint, size, 0);
    
    if (g.codepoint != 0 && g.size != 0) {
       printf("Codepoint found in fallback font\n");
