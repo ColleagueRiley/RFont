@@ -228,7 +228,7 @@ typedef u32 RFont_texture;
 typedef struct { u32 w, h; } RFont_area;
 #endif
 
-typedef struct RFont_font RFont_font;
+typedef struct RFont_font RFont_font; 
 
 typedef struct {
    u32 codepoint; /* the character (for checking) */
@@ -240,6 +240,29 @@ typedef struct {
    i32 src;
    float w, h, x1, y1, advance;
 } RFont_glyph;
+
+typedef struct RFont_src RFont_src;
+
+struct RFont_font {
+   RFont_src* src; /* source stb font info */
+   b8 free_font_memory;
+   float fheight; /* font height from stb */
+   float descent; /* font descent */
+   float numOfLongHorMetrics;
+   float space_adv;
+
+   RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
+   size_t glyph_len;
+
+   RFont_texture atlas; /* atlas texture */
+   size_t atlasWidth, atlasHeight;
+   float atlasX; /* the current x position inside the atlas */
+
+   float verts[RFONT_INIT_VERTS];
+   float tcoords[RFONT_INIT_VERTS];
+};
+
+
 
 /**
  * @brief Converts a codepoint to a utf8 string.
@@ -279,7 +302,17 @@ RFONT_API RFont_font* RFont_font_init(const char* font_name);
  * @param atlasHeight The height of the atlas texture. (This should == the max text size)
  * @return The `RFont_font` created using the TTF file data.
 */
-RFONT_API RFont_font* RFont_font_init_pro(const char* font_name, size_t atlasWidth, size_t atlasHeight);
+RFONT_API RFont_font* RFont_font_init_ex(const char* font_name, size_t atlasWidth, size_t atlasHeight);
+/**
+ * @brief Init a given font stucture with a TTF file path.
+ * @param font_name The TTF file path.
+ * @param atlasWidth The width of the atlas texture.
+ * @param atlasHeight The height of the atlas texture. (This should == the max text size)
+ * @pram ptr Pointer to the given font structure 
+ * @return returns the same pointer or NULL if the font failed to load 
+*/
+RFONT_API RFont_font* RFont_font_init_ptr(const char* font_name, size_t atlasWidth, size_t atlasHeight, RFont_font* font);
+
 #endif
 
 
@@ -299,13 +332,30 @@ RFONT_API RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free);
  * @param auto_free If the memory should be automatically freed by `RFont_font_free`.
  * @return The `RFont_font` created from the data.
 */
-RFONT_API RFont_font* RFont_font_init_data_pro(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight);
+RFONT_API RFont_font* RFont_font_init_data_ex(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight);
+
+/**
+ * @brief Init a given font stucture with raw TTF data.
+ * @param font_data The raw TTF data.
+ * @param atlasWidth The width of the atlas texture.
+ * @param atlasHeight The height of the atlas texture. (This should == the max text size)
+ * @param auto_free If the memory should be automatically freed by `RFont_font_free`.
+ * @return The `RFont_font` created from the data.
+ * @return returns the same pointer or NULL if the font failed to load 
+*/
+RFONT_API RFont_font* RFont_font_init_data_ptr(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight, RFont_font* ptr);
 
 /**
  * @brief Free data from the font stucture, including the stucture itself
  * @param font The font stucture to free
 */
 RFONT_API void RFont_font_free(RFont_font* font);
+
+/**
+ * @brief Free data from the font stucture only (not including the stucture) 
+ * @param font The strucutre with the font data  to free
+*/
+RFONT_API void RFont_font_free_ptr(RFont_font* font);
 
 typedef RFont_glyph (*RFont_glyph_fallback_callback)(RFont_font* font, u32 codepoint, size_t size);
 RFont_glyph_fallback_callback RFont_set_glyph_fallback_callback(RFont_glyph_fallback_callback callback);
@@ -336,7 +386,7 @@ RFONT_API RFont_glyph RFont_font_add_codepoint(RFont_font* font, u32 codepoint, 
  * @param fallback If the fallback function should not be called.
  * @return The `RFont_glyph` created from the data and added to the atlas.
 */
-RFONT_API RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t size, b8 fallback);
+RFONT_API RFont_glyph RFont_font_add_codepoint_ex(RFont_font* font, u32 codepoint, size_t size, b8 fallback);
 
 #ifndef RFONT_NO_FMT
 /**
@@ -534,34 +584,17 @@ typedef struct stbtt_fontinfo rstbtt_fontinfo;
 #define rstbtt_GetGlyphBox stbtt_GetGlyphBox
 #endif /* RFONT_EXTERNAL_STB */
 
+struct RFont_src {
+    rstbtt_fontinfo info;
+}; 
+
 /* 
 END of stb defines required by RFont
 
 you probably care about this part 
 */
 
-struct RFont_font {
-   rstbtt_fontinfo info; /* source stb font */
-   b8 free_font_memory;
-   float fheight; /* font height from stb */
-   float descent; /* font descent */
-   float numOfLongHorMetrics;
-   float space_adv;
-
-   RFont_glyph glyphs[RFONT_MAX_GLYPHS]; /* glyphs */
-   size_t glyph_len;
-
-   RFont_texture atlas; /* atlas texture */
-   size_t atlasWidth, atlasHeight;
-   float atlasX; /* the current x position inside the atlas */
-
-   float* verts;
-   float* tcoords;
-};
-
 size_t RFont_width = 0, RFont_height = 0;
-
-RFont_font* font2;
 
 void RFont_update_framebuffer(size_t width, size_t height) {
    /* set size of the framebuffer (for rendering later on) */
@@ -579,51 +612,64 @@ void RFont_init(size_t width, size_t height) {
 }
 
 #ifndef RFONT_NO_STDIO
-RFont_font* RFont_font_init(const char* font_name) {
-   return RFont_font_init_pro(font_name, RFONT_ATLAS_WIDTH_DEFAULT, RFONT_ATLAS_HEIGHT_DEFAULT);
+char* RFont_read_file(const char* font_name) {
+    size_t size, out;
+    char* ttf_buffer;
+    FILE* ttf_file = fopen(font_name, "rb");
+
+    if (ttf_file == NULL) return NULL;
+
+    fseek(ttf_file, 0U, SEEK_END);
+    size = (size_t)ftell(ttf_file);
+    if (size <= 0) return NULL;
+
+    ttf_buffer = (char*)RFONT_MALLOC(sizeof(char) * (size_t)size); 
+    fseek(ttf_file, 0U, SEEK_SET);
+
+    out = fread(ttf_buffer, 1, (size_t)size, ttf_file);
+    RFONT_UNUSED(out);
+
+    return ttf_buffer;
 }
 
-RFont_font* RFont_font_init_pro(const char* font_name, size_t atlasWidth, size_t atlasHeight) {
-   size_t size, out;
-   char* ttf_buffer;
-   FILE* ttf_file = fopen(font_name, "rb");
-  
-   if (ttf_file == NULL) return NULL;
+RFont_font* RFont_font_init(const char* font_name) {
+   return RFont_font_init_ex(font_name, RFONT_ATLAS_WIDTH_DEFAULT, RFONT_ATLAS_HEIGHT_DEFAULT);
+}
 
-   fseek(ttf_file, 0U, SEEK_END);
-   size = (size_t)ftell(ttf_file);
-   if (size <= 0) return NULL;
+RFont_font* RFont_font_init_ex(const char* font_name, size_t atlasWidth, size_t atlasHeight) {
+    char* ttf_buffer = RFont_read_file(font_name);
+    RFont_font* font = RFont_font_init_data_ex((u8*)ttf_buffer, 1, atlasWidth, atlasHeight);
+    return font;
+}
 
-   ttf_buffer = (char*)RFONT_MALLOC(sizeof(char) * (size_t)size); 
-   fseek(ttf_file, 0U, SEEK_SET);
-
-   out = fread(ttf_buffer, 1, (size_t)size, ttf_file);
-   RFONT_UNUSED(out);
-
-   return RFont_font_init_data_pro((u8*)ttf_buffer, 1, atlasWidth, atlasHeight);
+RFont_font* RFont_font_init_ptr(const char* font_name, size_t atlasWidth, size_t atlasHeight, RFont_font* ptr) {
+    char* ttf_buffer = RFont_read_file(font_name);
+    RFont_font* font = RFont_font_init_data_ptr((u8*)ttf_buffer, 1, atlasWidth, atlasHeight, ptr);
+    return font;
 }
 #endif
 
 RFont_font* RFont_font_init_data(u8* font_data, b8 auto_free) {
-   return RFont_font_init_data_pro(font_data, auto_free, RFONT_ATLAS_WIDTH_DEFAULT, RFONT_ATLAS_HEIGHT_DEFAULT);
+   return RFont_font_init_data_ex(font_data, auto_free, RFONT_ATLAS_WIDTH_DEFAULT, RFONT_ATLAS_HEIGHT_DEFAULT);
 }
 
-RFont_font* RFont_font_init_data_pro(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight) {
-   RFont_font* font = (RFont_font*)RFONT_MALLOC(sizeof(RFont_font));
+RFont_font* RFont_font_init_data_ex(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight) {
+    RFont_font* font = (RFont_font*)RFONT_MALLOC(sizeof(RFont_font));
+    return RFont_font_init_data_ptr(font_data, auto_free, atlasWidth, atlasHeight, font);
+}
 
-   font->verts = (float*)RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
-   font->tcoords = (float*)RFONT_MALLOC(sizeof(float) * RFONT_INIT_VERTS);
-
+RFont_font* RFont_font_init_data_ptr(u8* font_data, b8 auto_free, size_t atlasWidth, size_t atlasHeight, RFont_font* font) {
+   font->src = (RFont_src*)RFONT_MALLOC(sizeof(RFont_src));
    font->atlasWidth = atlasWidth;
    font->atlasHeight = atlasHeight;
 
-   rstbtt_InitFont(&font->info, font_data, 0);
+   rstbtt_InitFont(&font->src->info, font_data, 0);
    
-   font->fheight = RFONT_SHORT(font->info.data, font->info.hhea + 4) - RFONT_SHORT(font->info.data, font->info.hhea + 6);
-   font->descent = RFONT_SHORT(font->info.data, font->info.hhea + 6);
+   font->fheight = RFONT_SHORT(font->src->info.data, font->src->info.hhea + 4) - RFONT_SHORT(font->src->info.data, font->src->info.hhea + 6);
+   font->descent = RFONT_SHORT(font->src->info.data, font->src->info.hhea + 6);
    
-   font->numOfLongHorMetrics = RFONT_USHORT(font->info.data, font->info.hhea + 34);
-   font->space_adv = RFONT_SHORT(font->info.data, font->info.hmtx + 4 * (i32)(font->numOfLongHorMetrics - 1));
+   font->numOfLongHorMetrics = RFONT_USHORT(font->src->info.data, font->src->info.hhea + 34);
+   font->space_adv = RFONT_SHORT(font->src->info.data, font->src->info.hmtx + 4 * (i32)(font->numOfLongHorMetrics - 1));
 
    #ifndef RFONT_NO_GRAPHICS
    font->atlas = RFont_create_atlas((u32)atlasWidth, (u32)atlasHeight);
@@ -636,18 +682,20 @@ RFont_font* RFont_font_init_data_pro(u8* font_data, b8 auto_free, size_t atlasWi
    return font;
 }
 
-void RFont_font_free(RFont_font* font) {
+void RFont_font_free_ptr(RFont_font* font) {
    #ifndef RFONT_NO_GRAPHICS
    RFont_render_free(font->atlas);
    #endif
-
+  
    if (font->free_font_memory)
-      RFONT_FREE(font->info.data);
-   
-   RFONT_FREE(font->verts);
-   RFONT_FREE(font->tcoords);
+      RFONT_FREE(font->src->info.data);
 
-   RFONT_FREE  (font);
+   RFONT_FREE(font->src);
+}
+
+void RFont_font_free(RFont_font* font) {
+    RFont_font_free_ptr(font);
+    RFONT_FREE(font);
 }
 
 void RFont_close(void) {
@@ -728,10 +776,10 @@ RFont_glyph RFont_font_add_char(RFont_font* font, char ch, size_t size) {
 }
 
 RFont_glyph RFont_font_add_codepoint(RFont_font* font, u32 codepoint, size_t size) {
-   return RFont_font_add_codepointPro(font, codepoint, size, 1);
+   return RFont_font_add_codepoint_ex(font, codepoint, size, 1);
 }
 
-RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t size, b8 fallback) {
+RFont_glyph RFont_font_add_codepoint_ex(RFont_font* font, u32 codepoint, size_t size, b8 fallback) {
    RFont_glyph* glyph; 
    RFont_glyph glyphNull; 
    
@@ -751,7 +799,7 @@ RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t 
        return glyphNull;
    }
    
-   glyph->src = rstbtt_FindGlyphIndex(&font->info, (int)codepoint);
+   glyph->src = rstbtt_FindGlyphIndex(&font->src->info, (int)codepoint);
    
    if (glyph->src == 0 && fallback && RFont_glyph_fallback) {
       RFont_glyph fallbackGlyph = RFont_glyph_fallback(font, codepoint, size);
@@ -762,13 +810,13 @@ RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t 
 
    font->glyph_len++;
 
-   if (rstbtt_GetGlyphBox(&font->info, glyph->src, &x0, &y0, &x1, &y1) == 0) {
+   if (rstbtt_GetGlyphBox(&font->src->info, glyph->src, &x0, &y0, &x1, &y1) == 0) {
       return glyphNull;
    }
 
    scale = ((float)size) / font->fheight;
 
-   bitmap =  rstbtt_GetGlyphBitmapSubpixel(&font->info, 0, scale, 0.0f, 0.0f, glyph->src, &w, &h, 0, 0);
+   bitmap =  rstbtt_GetGlyphBitmapSubpixel(&font->src->info, 0, scale, 0.0f, 0.0f, glyph->src, &w, &h, 0, 0);
 
    glyph->w = (float)w;
    glyph->h = (float)h;
@@ -797,9 +845,9 @@ RFont_glyph RFont_font_add_codepointPro(RFont_font* font, u32 codepoint, size_t 
    RFONT_FREE(bitmap);
    
    if (glyph->src < font->numOfLongHorMetrics)
-      advanceX = RFONT_SHORT(font->info.data, font->info.hmtx + 4 * glyph->src);
+      advanceX = RFONT_SHORT(font->src->info.data, font->src->info.hmtx + 4 * glyph->src);
    else
-      advanceX = RFONT_SHORT(font->info.data, font->info.hmtx + 4 * (i32)(font->numOfLongHorMetrics - 1));
+      advanceX = RFONT_SHORT(font->src->info.data, font->src->info.hmtx + 4 * (i32)(font->numOfLongHorMetrics - 1));
 
    glyph->advance = (u32)((float)advanceX * scale);
 
@@ -1433,13 +1481,6 @@ you probably don't care about this part if you're reading just the RFont code
 #ifndef RFONT_EXTERNAL_STB
    typedef char rstbtt__check_size32[sizeof(i32)==4 ? 1 : -1];
    typedef char rstbtt__check_size16[sizeof(i16)==2 ? 1 : -1];
-
-   /* #define your own functions "RFONT_MALLOC" / "RFONT_FREE" to avoid RFONT_MALLOC */
-   #ifndef RFONT_MALLOC
-   #define RFONT_MALLOC(x,u)  ((void)(u),RFONT_MALLOC(x))
-   #define RFONT_FREE(x,u)    ((void)(u),RFONT_FREE(x))
-   #endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1547,6 +1588,11 @@ typedef int rstbtt__test_oversample_pow2[(rstbtt_MAX_OVERSAMPLE & (rstbtt_MAX_OV
 #else
 #define rstbtt__NOTUSED(v)  (void)sizeof(v)
 #endif
+
+#undef RFONT_API 
+#define RFONT_API extern 
+
+
 
 RFONT_API u8 rstbtt__buf_get8(rstbtt__buf *b)
 {
