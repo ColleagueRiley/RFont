@@ -388,16 +388,6 @@ RFONT_API RFont_glyph RFont_font_add_codepoint(RFont_font* font, u32 codepoint, 
 */
 RFONT_API RFont_glyph RFont_font_add_codepoint_ex(RFont_font* font, u32 codepoint, size_t size, b8 fallback);
 
-#ifndef RFONT_NO_FMT
-/**
- * @brief Formats a string.
- * @param string The source string
- * @param ... format data
- * @return The formatted string 
-*/
-RFONT_API const char* RFont_fmt(const char* string, ...);
-#endif
-
 /**
  * @brief Add a string to the font's atlas.
  * @param font The font to use.
