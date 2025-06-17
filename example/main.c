@@ -8,13 +8,15 @@
 #include <GLES3/gl3.h>
 #endif
 
-#define RGFW_C89
-#include "RGFW.h"
-
+#define RFONT_C89
 #if !defined(RFONT_RENDER_LEGACY) && !defined(RFONT_RENDER_ES3)
 #define RGL_LOAD_IMPLEMENTATION
 #include "ext/rglLoad.h"
 #endif
+
+#define RGFWDEF
+#define RGFW_C89
+#include "RGFW.h"
 
 #define RFONT_INT_DEFINED
 #include "RFont.h"

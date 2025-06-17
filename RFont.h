@@ -92,7 +92,7 @@ int main () {
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-        #define RFONT_API RFONT_INLINE 
+        #define RFONT_API extern RFONT_INLINE 
     #endif
 #endif
 
@@ -515,9 +515,6 @@ RFONT_API int rstbtt_FindGlyphIndex(const rstbtt_fontinfo *info, int unicode_cod
 
 RFONT_API int  rstbtt_GetGlyphKernAdvance(const rstbtt_fontinfo *info, int glyph1, int glyph2);
 RFONT_API int  rstbtt_GetGlyphBox(const rstbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
-
-#undef RFONT_API 
-#define RFONT_API 
 #else
 #ifdef RFONT_EXTERNAL_STB_IMPLEMENTATION
     #define RFONT_EXTERNAL_STB
