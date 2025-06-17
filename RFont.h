@@ -92,7 +92,7 @@ int main () {
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-        #define RFONT_API extern RFONT_INLINE 
+        #define RFONT_API RFONT_INLINE 
     #endif
 #endif
 
