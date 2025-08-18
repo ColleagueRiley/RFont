@@ -219,14 +219,13 @@ typedef u32 RFont_texture;
 #define RFONT_UNUSED(x) (void) (x);
 #endif
 
-/* make sure RFont declares aren't declared twice */
-#ifndef RFONT_H
-#define RFONT_H
+#ifndef RFONT_RENDERER_H
+#define RFONT_RENDERER_H
 
 typedef struct RFont_renderer {
 	void* ctx; /*!< source renderer data */
 	size_t (*size)(void); /*!< get the size of the renderer context */
-	void (*initPtr)(void** ctx, void* ptr); /* any initalizations the renderer needs to do */
+	void (*initPtr)(void* ctx); /* any initalizations the renderer needs to do */
 	RFont_texture (*create_atlas)(void* ctx, u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
 	void (*free_atlas)(void* ctx, RFont_texture atlas);
 	b8 (*resize_atlas)(void* ctx, RFont_texture* atlas, u32 atlasWidth, u32 atlasHeight); /* resize atlas based on given size, returns 1 if successful */
@@ -236,6 +235,13 @@ typedef struct RFont_renderer {
 	void (*set_color)(void* ctx, float r, float g, float b, float a); /*!< set the current rendering color */
 	void (*freePtr)(void* ctx); /* free any memory the renderer might need to free */
 } RFont_renderer;
+
+typedef struct RFont_font RFont_font;
+
+#endif /* RFONT_RENDERER_H */
+
+#ifndef RFONT_H
+#define RFONT_H
 
 RFONT_API size_t RFont_renderer_size(RFont_renderer* renderer);
 
@@ -248,15 +254,11 @@ RFONT_API void RFont_renderer_set_color(RFont_renderer* renderer, float r, float
 RFONT_API void RFont_renderer_freePtr(RFont_renderer* renderer);
 RFONT_API void RFont_renderer_free(RFont_renderer* renderer);
 
-
-
 #define RFONT_GET_FONT_WIDTH(fontHeight) RFONT_MAX_GLYPHS * fontHeight
 
 #ifndef RFont_area
 typedef struct { u32 w, h; } RFont_area;
 #endif
-
-typedef struct RFont_font RFont_font;
 
 typedef struct {
    u32 codepoint; /* the character (for checking) */
@@ -497,13 +499,18 @@ size_t RFont_renderer_size(RFont_renderer* renderer) {
 	return renderer->size();
 }
 
-void RFont_renderer_initPtr(RFont_renderer* renderer, void* ptr) {
-	renderer->initPtr(&renderer->ctx, ptr);
+void RFont_renderer_init(RFont_renderer* renderer) {
+	void* ptr = NULL;
+	size_t size = RFont_renderer_size(renderer);
+
+	if (size) ptr = RFONT_MALLOC(size);
+
+	RFont_renderer_initPtr(renderer, ptr);
 }
 
-void RFont_renderer_init(RFont_renderer* renderer) {
-	void* ptr = RFONT_MALLOC(RFont_renderer_size(renderer));
-	RFont_renderer_initPtr(renderer, ptr);
+void RFont_renderer_initPtr(RFont_renderer* renderer, void* ptr) {
+	renderer->ctx = ptr;
+	renderer->initPtr(renderer->ctx);
 }
 
 void RFont_renderer_set_framebuffer(RFont_renderer* renderer, u32 w, u32 h) {
@@ -516,13 +523,12 @@ void RFont_renderer_set_color(RFont_renderer* renderer, float r, float g, float 
 
 
 void RFont_renderer_freePtr(RFont_renderer* renderer) {
-	renderer->freePtr(&renderer->ctx);
+	renderer->freePtr(renderer->ctx);
 }
-
 
 void RFont_renderer_free(RFont_renderer* renderer) {
 	RFont_renderer_freePtr(renderer);
-	RFONT_FREE(renderer->ctx);
+	if (renderer->ctx) RFONT_FREE(renderer->ctx);
 }
 
 #define RFONT_CHAR(p, index)     (((char*)p)[index])

@@ -38,14 +38,14 @@ all: gl gl3
 RGFW.o: ./ext/RGFW.h ./ext/RGFW.c
 	$(CC) -c ext/RGFW.c
 
-gl: ../RFont.h RGFW.o
-	$(CC) $(FLAGS) main.c RGFW.o $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall -O3 -o gl$(EXT)
-gl3: ../RFont.h RGFW.o
-	$(CC) $(FLAGS) main.c RGFW.o $(LIBS) -O3 -I./ext -I../ -Wall -o gl3$(EXT)
+gl: ../RFont.h RFont_gl1.h main.c RGFW.o
+	$(CC) -g3 $(FLAGS) main.c RGFW.o $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall  -o gl$(EXT)
+gl3: ../RFont.h  RFont_gl.h main.c RGFW.o
+	$(CC) -g3 $(FLAGS) main.c RGFW.o $(LIBS) -I./ext -I../ -Wall -o gl3$(EXT)
 
 clean:
 	rm gl3$(EXT) gl$(EXT) gl3.exe.so gl.exe.so *.o -f
 
-debug: gl gl3 es3
+debug: gl gl3
 	./gl$(EXT) gl
 	./gl3$(EXT) gl3

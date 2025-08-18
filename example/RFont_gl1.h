@@ -5,6 +5,11 @@
 #ifndef RFONT_GL1_HEADER
 #define RFONT_GL1_HEADER
 
+typedef struct RFont_GL1_info{
+	u32 width, height;
+	float color[4];
+} RFont_GL1_info;
+
 RFONT_API RFont_renderer RFont_gl1_renderer(void);
 
 #endif
@@ -32,12 +37,6 @@ RFONT_API RFont_renderer RFont_gl1_renderer(void);
 #ifndef GL_CLAMP_TO_EDGE
 #define GL_CLAMP_TO_EDGE			0x812F
 #endif
-
-typedef struct RFont_GL1_info{
-	u32 width, height;
-	float color[4];
-} RFont_GL1_info;
-
 
 #define RFONT_MULTILINE_STR(s) #s
 
@@ -199,15 +198,8 @@ void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float
 }
 
 void RFont_gl1_free_atlas(void* ctx, RFont_texture atlas) { glDeleteTextures(1, &atlas); RFONT_UNUSED(ctx); }
-void RFont_gl1_renderer_initPtr(void** ctx, void* ptr) {
-	*ctx = ptr;
-	RFont_gl1_renderer_set_color(*ctx, 0, 0, 0, 1);
-}
-
-void RFont_gl1_renderer_freePtr(void* ctx) {
-	RFONT_UNUSED(ctx);
-}
-
+void RFont_gl1_renderer_initPtr(void* ctx) { RFont_gl1_renderer_set_color(ctx, 0, 0, 0, 1); }
+void RFont_gl1_renderer_freePtr(void* ctx) { RFONT_UNUSED(ctx);}
 size_t RFont_gl1_renderer_size(void) { return sizeof(RFont_GL1_info); }
 
 RFont_renderer RFont_gl1_renderer(void) {

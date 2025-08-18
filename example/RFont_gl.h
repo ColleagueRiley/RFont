@@ -5,7 +5,22 @@
 #ifndef RFONT_GL_HEADER
 #define RFONT_GL_HEADER
 
+typedef struct RFont_mat4 {
+    float m[16];
+} RFont_mat4;
+
+typedef struct RFont_GL_info{
+	u32 vao, vbo, tbo, cbo, ebo, program, vShader, fShader;
+	i32 matrixLoc;
+
+	u32 width, height;
+	float color[4];
+	RFont_mat4 matrix;
+	float colors[RFONT_INIT_VERTS * 2];
+} RFont_GL_info;
+
 RFONT_API RFont_renderer RFont_gl_renderer(void);
+
 #endif
 
 #ifdef RFONT_IMPLEMENTATION
@@ -34,22 +49,7 @@ RFONT_API RFont_renderer RFont_gl_renderer(void);
 #define GL_CLAMP_TO_EDGE			0x812F
 #endif
 
-typedef struct RFont_mat4 {
-    float m[16];
-} RFont_mat4;
-
 RFont_mat4 RFont_ortho(float left, float right, float bottom, float top, float znear, float zfar);
-
-typedef struct RFont_GL_info{
-	GLuint vao, vbo, tbo, cbo, ebo,
-	program, vShader, fShader;
-	GLint matrixLoc;
-
-	u32 width, height;
-	float color[4];
-	RFont_mat4 matrix;
-	float colors[RFONT_INIT_VERTS * 2];
-} RFont_GL_info;
 
 RFont_texture RFont_gl_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight) {
 	static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
@@ -169,8 +169,7 @@ void RFont_gl_renderer_set_color(void* ctx, float r, float g, float b, float a) 
    ((RFont_GL_info*)ctx)->color[3] = a;
 }
 
-void RFont_gl_renderer_initPtr(void** context, void* ptr) {
-	void* ctx;
+void RFont_gl_renderer_initPtr(void* ctx) {
 	static const char* defaultVShaderCode = RFONT_MULTILINE_STR(
 		\x23version 330 core       \n
 		layout (location = 0) in vec3 vertexPosition;
@@ -201,9 +200,6 @@ void RFont_gl_renderer_initPtr(void** context, void* ptr) {
 			FragColor = texture(texture0, fragTexCoord) * fragColor;
 		}
 	);
-
-	*context = ptr;
-	ctx = *context;
 
 	RFont_gl_renderer_set_color(ctx, 0, 0, 0, 1);
 	glGenVertexArrays(1, &((RFont_GL_info*)ctx)->vao);

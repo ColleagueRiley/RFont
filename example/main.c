@@ -102,9 +102,7 @@ int main(int argc, char **argv) {
 
     RFont_font_free(&renderer, english);
     RFont_font_free(&renderer, japanese);
-
 	RFont_renderer_free(&renderer);
-
     RGFW_window_close(win);
     return 0;
 }
