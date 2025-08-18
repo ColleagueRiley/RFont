@@ -199,26 +199,29 @@ void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float
 }
 
 void RFont_gl1_free_atlas(void* ctx, RFont_texture atlas) { glDeleteTextures(1, &atlas); RFONT_UNUSED(ctx); }
-void RFont_gl1_renderer_init(void** ctx) {
-	*ctx = (void*)RFONT_MALLOC(sizeof(RFont_GL1_info));
+void RFont_gl1_renderer_initPtr(void** ctx, void* ptr) {
+	*ctx = ptr;
 	RFont_gl1_renderer_set_color(*ctx, 0, 0, 0, 1);
 }
 
-void RFont_gl1_renderer_free(void** ctx) {
-	RFONT_FREE(*ctx);
+void RFont_gl1_renderer_freePtr(void* ctx) {
+	RFONT_UNUSED(ctx);
 }
+
+size_t RFont_gl1_renderer_size(void) { return sizeof(RFont_GL1_info); }
 
 RFont_renderer RFont_gl1_renderer(void) {
 	RFont_renderer renderer;
 
-	renderer.init = RFont_gl1_renderer_init;
+	renderer.initPtr = RFont_gl1_renderer_initPtr;
 	renderer.create_atlas = RFont_gl1_create_atlas;
 	renderer.free_atlas = RFont_gl1_free_atlas;
 	renderer.bitmap_to_atlas = RFont_gl1_bitmap_to_atlas;
 	renderer.render = RFont_gl1_renderer_text;
 	renderer.set_color = RFont_gl1_renderer_set_color;
 	renderer.set_framebuffer = RFont_gl1_renderer_set_framebuffer;
-	renderer.free = RFont_gl1_renderer_free;
+	renderer.freePtr = RFont_gl1_renderer_freePtr;
+	renderer.size = RFont_gl1_renderer_size;
 
 	return renderer;
 }

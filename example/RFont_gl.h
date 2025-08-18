@@ -38,9 +38,7 @@ typedef struct RFont_mat4 {
     float m[16];
 } RFont_mat4;
 
-RFont_mat4 RFont_loadIdentity(void);
-RFont_mat4 RFont_ortho(float matrix[16], float left, float right, float bottom, float top, float znear, float zfar);
-RFont_mat4 RFont_mat4_multiply(float left[16], float right[16]);
+RFont_mat4 RFont_ortho(float left, float right, float bottom, float top, float znear, float zfar);
 
 typedef struct RFont_GL_info{
 	GLuint vao, vbo, tbo, cbo, ebo,
@@ -50,6 +48,7 @@ typedef struct RFont_GL_info{
 	u32 width, height;
 	float color[4];
 	RFont_mat4 matrix;
+	float colors[RFONT_INIT_VERTS * 2];
 } RFont_GL_info;
 
 RFont_texture RFont_gl_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight) {
@@ -60,9 +59,6 @@ RFont_texture RFont_gl_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight) 
 	memset(data, 0, atlasWidth * atlasHeight * 4);
 
 	RFONT_UNUSED(ctx);
-#if defined(RFONT_DEBUG)
-	glEnable(GL_DEBUG_OUTPUT);
-#endif
 
 	glEnable(GL_TEXTURE_2D);
 
@@ -87,6 +83,7 @@ RFont_texture RFont_gl_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight) 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	return id;
 }
+
 
 b8 RFont_gl_resize_atlas(void* ctx, RFont_texture* atlas, u32 newWidth, u32 newHeight) {
 	static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
@@ -126,7 +123,6 @@ b8 RFont_gl_resize_atlas(void* ctx, RFont_texture* atlas, u32 newWidth, u32 newH
 #define GL_UNPACK_SKIP_ROWS 0x0CF3
 #endif
 
-
 void RFont_gl_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPixels, GLint skipRows);
 void RFont_gl_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPixels, GLint skipRows) {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
@@ -135,12 +131,12 @@ void RFont_gl_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPixe
 	glPixelStorei(GL_UNPACK_SKIP_ROWS, skipRows);
 }
 
+
 void RFont_gl_bitmap_to_atlas(void* ctx, RFont_texture atlas, u8* bitmap, float x, float y, float w, float h) {
 	GLint alignment, rowLength, skipPixels, skipRows;
 	RFONT_UNUSED(ctx);
 
 	glEnable(GL_TEXTURE_2D);
-
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
 	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &rowLength);
 	glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &skipPixels);
@@ -159,7 +155,6 @@ void RFont_gl_bitmap_to_atlas(void* ctx, RFont_texture atlas, u8* bitmap, float 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-
 #define RFONT_MULTILINE_STR(s) #s
 
 void RFont_gl_renderer_set_framebuffer(void* ctx, u32 w, u32 h) {
@@ -174,40 +169,40 @@ void RFont_gl_renderer_set_color(void* ctx, float r, float g, float b, float a) 
    ((RFont_GL_info*)ctx)->color[3] = a;
 }
 
-void RFont_gl_renderer_init(void** context) {
+void RFont_gl_renderer_initPtr(void** context, void* ptr) {
 	void* ctx;
 	static const char* defaultVShaderCode = RFONT_MULTILINE_STR(
 		\x23version 330 core       \n
 		layout (location = 0) in vec3 vertexPosition;
 		layout (location = 1) in vec2 vertexTexCoord;
 		layout (location = 2) in vec4 inColor;
-	out vec2 fragTexCoord;
-	out vec4 fragColor;
+		out vec2 fragTexCoord;
+		out vec4 fragColor;
 
-	uniform mat4 matrix;
+		uniform mat4 matrix;
 
-	void main() {
-		fragColor = inColor;
-		gl_Position = vec4(vertexPosition, 1.0) * matrix;
-		fragTexCoord = vertexTexCoord;
-	}
-);
+		void main() {
+			fragColor = inColor;
+			gl_Position = matrix * vec4(vertexPosition, 1.0);
+			fragTexCoord = vertexTexCoord;
+		}
+	);
 
 	static const char* defaultFShaderCode = RFONT_MULTILINE_STR(
 		\x23version 330 core                \n
 		out vec4 FragColor;
 
-	in vec4 fragColor;
-	in vec2 fragTexCoord;
+		in vec4 fragColor;
+		in vec2 fragTexCoord;
 
-	uniform sampler2D texture0;
+		uniform sampler2D texture0;
 
-	void main() {
-		FragColor = texture(texture0, fragTexCoord) * fragColor;
-	}
-);
+		void main() {
+			FragColor = texture(texture0, fragTexCoord) * fragColor;
+		}
+	);
 
-	*context = (void*)RFONT_MALLOC(sizeof(RFont_GL_info));
+	*context = ptr;
 	ctx = *context;
 
 	RFont_gl_renderer_set_color(ctx, 0, 0, 0, 1);
@@ -223,19 +218,10 @@ void RFont_gl_renderer_init(void** context) {
 	glShaderSource(((RFont_GL_info*)ctx)->vShader, 1, &defaultVShaderCode, NULL);
 	glCompileShader(((RFont_GL_info*)ctx)->vShader);
 
-#ifdef RFONT_DEBUG
-	RFont_debug_shader(((RFont_GL_info*)ctx)->vShader, "Vertex", "compile");
-#endif
-
 	/* compile fragment shader */
 	((RFont_GL_info*)ctx)->fShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(((RFont_GL_info*)ctx)->fShader, 1, &defaultFShaderCode, NULL);
 	glCompileShader(((RFont_GL_info*)ctx)->fShader);
-
-
-#ifdef RFONT_DEBUG
-	RFont_debug_shader(((RFont_GL_info*)ctx)->fShader, "Fragment", "compile");
-#endif
 
 	/* create program and link vertex and fragment shaders */
 	((RFont_GL_info*)ctx)->program = glCreateProgram();
@@ -252,21 +238,11 @@ void RFont_gl_renderer_init(void** context) {
 	glUseProgram(((RFont_GL_info*)ctx)->program);
 	((RFont_GL_info*)ctx)->matrixLoc = glGetUniformLocation(((RFont_GL_info*)ctx)->program, "matrix");
 	glUseProgram(0);
-
-#ifdef RFONT_DEBUG
-	RFont_debug_shader(((RFont_GL_info*)ctx)->program, "Both", "link to the program");
-#endif
 }
 
 void RFont_gl_renderer_text(void* ctx, RFont_texture atlas, float* verts, float* tcoords, size_t nverts) {
-	float* colors = RFONT_MALLOC(sizeof(float) * nverts * 4);
 	u32 i = 0;
-	for (i = 0; i < (nverts * 4); i += 4) {
-		colors[i] = ((RFont_GL_info*)ctx)->color[0];
-		colors[i + 1] = ((RFont_GL_info*)ctx)->color[1];
-		colors[i + 2] = ((RFont_GL_info*)ctx)->color[2];
-		colors[i + 3] = ((RFont_GL_info*)ctx)->color[3];
-	}
+	assert(ctx && nverts);
 
 	glEnable(GL_TEXTURE_2D);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -274,13 +250,6 @@ void RFont_gl_renderer_text(void* ctx, RFont_texture atlas, float* verts, float*
 	glDisable(GL_DEPTH_TEST);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_CULL_FACE);
-
-	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, ((RFont_GL_info*)ctx)->cbo);
-	glBufferData(GL_ARRAY_BUFFER, (i32)(nverts * 4 * sizeof(float)), colors, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	RFONT_FREE(colors);
 
 	glBindVertexArray(((RFont_GL_info*)ctx)->vao);
 
@@ -296,11 +265,18 @@ void RFont_gl_renderer_text(void* ctx, RFont_texture atlas, float* verts, float*
 	glBufferData(GL_ARRAY_BUFFER, (i32)(nverts * 2 * sizeof(float)), tcoords, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
+	for (i = 0; i < (nverts * 4); i += 4)
+		memcpy(&((RFont_GL_info*)ctx)->colors[i], ((RFont_GL_info*)ctx)->color, sizeof(float) * 4);
+
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, ((RFont_GL_info*)ctx)->cbo);
+	glBufferData(GL_ARRAY_BUFFER, (i32)(nverts * 4 * sizeof(float)), ((RFont_GL_info*)ctx)->colors, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, atlas);
+	((RFont_GL_info*)ctx)->matrix = RFont_ortho(0, (float)((RFont_GL_info*)ctx)->width, (float)((RFont_GL_info*)ctx)->height, 0, -1.0, 1.0);
 
-	((RFont_GL_info*)ctx)->matrix = RFont_loadIdentity();
-	((RFont_GL_info*)ctx)->matrix = RFont_ortho(((RFont_GL_info*)ctx)->matrix.m, 0, (float)((RFont_GL_info*)ctx)->width, (float)((RFont_GL_info*)ctx)->height, 0, -1.0, 1.0);
 	glUniformMatrix4fv(((RFont_GL_info*)ctx)->matrixLoc, 1, GL_FALSE, ((RFont_GL_info*)ctx)->matrix.m);
 
 	glDrawArrays(GL_TRIANGLES, 0, (i32)nverts);
@@ -312,64 +288,62 @@ void RFont_gl_renderer_text(void* ctx, RFont_texture atlas, float* verts, float*
 }
 
 void RFont_gl_free_atlas(void* ctx, RFont_texture atlas) { glDeleteTextures(1, &atlas); RFONT_UNUSED(ctx); }
-void RFont_gl_renderer_free(void** ctx) {
-	if (((RFont_GL_info*)*ctx)->vao != 0) {
+void RFont_gl_renderer_freePtr(void* ctx) {
+	if (((RFont_GL_info*)ctx)->vao != 0) {
 		/* free vertex array */
-		glDeleteVertexArrays(1, &((RFont_GL_info*)*ctx)->vao);
-		((RFont_GL_info*)*ctx)->vao = 0;
+		glDeleteVertexArrays(1, &((RFont_GL_info*)ctx)->vao);
+		((RFont_GL_info*)ctx)->vao = 0;
 
 		/* free buffers */
-		glDeleteBuffers(1, &((RFont_GL_info*)*ctx)->tbo);
-		glDeleteBuffers(1, &((RFont_GL_info*)*ctx)->vbo);
+		glDeleteBuffers(1, &((RFont_GL_info*)ctx)->tbo);
+		glDeleteBuffers(1, &((RFont_GL_info*)ctx)->vbo);
 
 		/* free program data */
-		glDeleteShader(((RFont_GL_info*)*ctx)->vShader);
-		glDeleteShader(((RFont_GL_info*)*ctx)->fShader);
-		glDeleteProgram(((RFont_GL_info*)*ctx)->program);
+		glDeleteShader(((RFont_GL_info*)ctx)->vShader);
+		glDeleteShader(((RFont_GL_info*)ctx)->fShader);
+		glDeleteProgram(((RFont_GL_info*)ctx)->program);
 	}
-
-	RFONT_FREE(*ctx);
 }
 
+size_t RFont_gl_renderer_size(void) { return sizeof(RFont_GL_info); }
 
 RFont_renderer RFont_gl_renderer(void) {
 	RFont_renderer renderer;
 
-	renderer.init = RFont_gl_renderer_init;
+	renderer.initPtr = RFont_gl_renderer_initPtr;
 	renderer.create_atlas = RFont_gl_create_atlas;
 	renderer.free_atlas = RFont_gl_free_atlas;
 	renderer.bitmap_to_atlas = RFont_gl_bitmap_to_atlas;
 	renderer.render = RFont_gl_renderer_text;
 	renderer.set_color = RFont_gl_renderer_set_color;
 	renderer.set_framebuffer = RFont_gl_renderer_set_framebuffer;
-	renderer.free = RFont_gl_renderer_free;
+	renderer.freePtr = RFont_gl_renderer_freePtr;
+	renderer.size = RFont_gl_renderer_size;
 
 	return renderer;
 }
 
-RFont_mat4 RFont_loadIdentity(void) {
-    RFont_mat4 matrix;
-    size_t i;
-
-    for (i = 0; i < 16; i++) {
-        matrix.m[i] = 0.0f;
-    }
-
-    matrix.m[0] = 1.0f;
-    matrix.m[5] = 1.0f;
-    matrix.m[10] = 1.0f;
-    matrix.m[15] = 1.0f;
-
-    return matrix;
-}
-
-RFont_mat4 RFont_ortho(float matrix[16], float left, float right, float bottom, float top, float znear, float zfar) {
-    float rl = right - left;
+RFont_mat4 RFont_ortho(float left, float right, float bottom, float top, float znear, float zfar) {
+	float matrix[16];
+	float rl = right - left;
     float tb = top - bottom;
     float fn = zfar - znear;
 
     float matOrtho[16];
+    RFont_mat4 result;
+    int row, col, i;
 
+	/* load identity */
+	for (i = 0; i < 16; i++) {
+        matrix[i] = 0.0f;
+    }
+
+    matrix[0] = 1.0f;
+    matrix[5] = 1.0f;
+    matrix[10] = 1.0f;
+    matrix[15] = 1.0f;
+
+	/* ortho */
     matOrtho[0]  = 2.0f / rl;
     matOrtho[1]  = 0.0f;
     matOrtho[2]  = 0.0f;
@@ -390,18 +364,12 @@ RFont_mat4 RFont_ortho(float matrix[16], float left, float right, float bottom, 
     matOrtho[14] = -(zfar + znear) / fn;
     matOrtho[15] = 1.0f;
 
-    return RFont_mat4_multiply(matrix, matOrtho);
-}
-
-RFont_mat4 RFont_mat4_multiply(float left[16], float right[16]) {
-    RFont_mat4 result;
-    int row, col, i;
-
+	/* multiply */
     for (row = 0; row < 4; ++row) {
         for (col = 0; col < 4; ++col) {
             float sum = 0.0f;
             for (i = 0; i < 4; ++i) {
-                sum += left[row * 4 + i] * right[i * 4 + col];
+                sum += matrix[row * 4 + i] * matOrtho[i * 4 + col];
             }
             result.m[row * 4 + col] = sum;
         }

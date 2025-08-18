@@ -60,18 +60,23 @@ BASIC TEMPLATE :
 int main () {
    ...
 
-   RFont_init();
+   RFont_renderer renderer = ...;
+   RFont_renderer_init(&renderer);
+   RFont_font* font = RFont_font_init(&renderer, "font.ttf");
 
-   RFont_font* font = RFont_font_init("font.ttf");
+   i32 w = ...;
+   i32 h = ...;
 
    while (1) {
       ...
-      RFont_draw_text(font, "text", 100, 100, 20);
+	  RFont_renderer_set_framebuffer(&renderer, (u32)w, (u32)h);
+	  RFont_renderer_set_color(&renderer, 0.0f, 1.0f, 0, 1.0f);
+	  RFont_draw_text(&renderer, font, "text", 100, 100, 20);
       ...
    }
 
-   RFont_font_free(font);
-   RFont_free();
+   RFont_font_free(&renderer, font);
+   RFont_renderer_free(&renderer);
    ...
 }
 */
@@ -220,21 +225,30 @@ typedef u32 RFont_texture;
 
 typedef struct RFont_renderer {
 	void* ctx; /*!< source renderer data */
-	void (*init)(void** ctx); /* any initalizations the renderer needs to do */
+	size_t (*size)(void); /*!< get the size of the renderer context */
+	void (*initPtr)(void** ctx, void* ptr); /* any initalizations the renderer needs to do */
 	RFont_texture (*create_atlas)(void* ctx, u32 atlasWidth, u32 atlasHeight); /* create a bitmap texture based on the given size */
 	void (*free_atlas)(void* ctx, RFont_texture atlas);
 	b8 (*resize_atlas)(void* ctx, RFont_texture* atlas, u32 atlasWidth, u32 atlasHeight); /* resize atlas based on given size, returns 1 if successful */
 	void (*bitmap_to_atlas)(void* ctx, RFont_texture atlas, u8* bitmap, float x, float y, float w, float h); /* add the given bitmap to the texture based on the given coords and size data */
 	void (*render)(void* ctx, RFont_texture atlas, float* verts, float* tcoords, size_t nverts); /* render the text, using the vertices, atlas texture, and texture coords given. */
-	void (*set_framebuffer)(void* ctx, u32 weight, u32 height);
-	void (*set_color)(void* ctx, float r, float g, float b, float a); /* set the current rendering color */
-	void (*free)(void** ctx); /* free any memory the renderer might need to free */
+	void (*set_framebuffer)(void* ctx, u32 weight, u32 height); /*!< set the frame buffer size (for ortho, for example) */
+	void (*set_color)(void* ctx, float r, float g, float b, float a); /*!< set the current rendering color */
+	void (*freePtr)(void* ctx); /* free any memory the renderer might need to free */
 } RFont_renderer;
 
+RFONT_API size_t RFont_renderer_size(RFont_renderer* renderer);
+
+RFONT_API void RFont_renderer_initPtr(RFont_renderer* renderer, void* ptr);
 RFONT_API void RFont_renderer_init(RFont_renderer* renderer);
-void RFont_renderer_set_framebuffer(RFont_renderer* renderer, u32 w, u32 h);
-void RFont_renderer_set_color(RFont_renderer* renderer, float r, float g, float b, float a);
+
+RFONT_API void RFont_renderer_set_framebuffer(RFont_renderer* renderer, u32 w, u32 h);
+RFONT_API void RFont_renderer_set_color(RFont_renderer* renderer, float r, float g, float b, float a);
+
+RFONT_API void RFont_renderer_freePtr(RFont_renderer* renderer);
 RFONT_API void RFont_renderer_free(RFont_renderer* renderer);
+
+
 
 #define RFONT_GET_FONT_WIDTH(fontHeight) RFONT_MAX_GLYPHS * fontHeight
 
@@ -345,13 +359,13 @@ RFONT_API RFont_font* RFont_font_init_data_ptr(RFont_renderer* renderer, u8* fon
  * @brief Free data from the font stucture, including the stucture itself
  * @param font The font stucture to free
 */
-RFONT_API void RFont_font_free(RFont_font* font);
+RFONT_API void RFont_font_free(RFont_renderer* renderer, RFont_font* font);
 
 /**
  * @brief Free data from the font stucture only (not including the stucture)
  * @param font The strucutre with the font data  to free
 */
-RFONT_API void RFont_font_free_ptr(RFont_font* font);
+RFONT_API void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font);
 
 typedef RFont_glyph (*RFont_glyph_fallback_callback)(RFont_renderer* renderer, RFont_font* font, u32 codepoint, size_t size);
 RFont_glyph_fallback_callback RFont_set_glyph_fallback_callback(RFont_glyph_fallback_callback callback);
@@ -479,8 +493,17 @@ RFONT_API RFont_area RFont_draw_text_len(RFont_renderer* renderer, RFont_font* f
 #define RFONT_GET_TEXPOSY(y, h) (float)((float)(y) / (float)(h))
 #endif
 
+size_t RFont_renderer_size(RFont_renderer* renderer) {
+	return renderer->size();
+}
+
+void RFont_renderer_initPtr(RFont_renderer* renderer, void* ptr) {
+	renderer->initPtr(&renderer->ctx, ptr);
+}
+
 void RFont_renderer_init(RFont_renderer* renderer) {
-	renderer->init(&renderer->ctx);
+	void* ptr = RFONT_MALLOC(RFont_renderer_size(renderer));
+	RFont_renderer_initPtr(renderer, ptr);
 }
 
 void RFont_renderer_set_framebuffer(RFont_renderer* renderer, u32 w, u32 h) {
@@ -491,8 +514,15 @@ void RFont_renderer_set_color(RFont_renderer* renderer, float r, float g, float 
 	renderer->set_color(renderer->ctx, r, g, b, a);
 }
 
+
+void RFont_renderer_freePtr(RFont_renderer* renderer) {
+	renderer->freePtr(&renderer->ctx);
+}
+
+
 void RFont_renderer_free(RFont_renderer* renderer) {
-	renderer->free(&renderer->ctx);
+	RFont_renderer_freePtr(renderer);
+	RFONT_FREE(renderer->ctx);
 }
 
 #define RFONT_CHAR(p, index)     (((char*)p)[index])
@@ -640,15 +670,16 @@ RFont_font* RFont_font_init_data_ptr(RFont_renderer* renderer, u8* font_data, b8
    return font;
 }
 
-void RFont_font_free_ptr(RFont_font* font) {
+void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font) {
+   renderer->free_atlas(renderer->ctx, font->atlas);
    if (font->free_font_memory)
       RFONT_FREE(font->src->info.data);
 
    RFONT_FREE(font->src);
 }
 
-void RFont_font_free(RFont_font* font) {
-    RFont_font_free_ptr(font);
+void RFont_font_free(RFont_renderer* renderer, RFont_font* font) {
+    RFont_font_free_ptr(renderer, font);
     RFONT_FREE(font);
 }
 
@@ -750,32 +781,34 @@ RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* fo
 
    glyph->src = rstbtt_FindGlyphIndex(&font->src->info, (int)codepoint);
 
-   if (glyph->src == 0 && fallback && RFont_glyph_fallback) {
+   if ((glyph->src == 0 && codepoint) && fallback && RFont_glyph_fallback) {
       RFont_glyph fallbackGlyph = RFont_glyph_fallback(renderer, font, codepoint, size);
       if (fallbackGlyph.codepoint != 0 && fallbackGlyph.size != 0) {
          return fallbackGlyph;
       }
    }
 
+   if (glyph->src == 0 && codepoint) return RFont_font_add_codepoint_ex(renderer, font, 0, size, fallback);
    font->glyph_len++;
 
-   if (rstbtt_GetGlyphBox(&font->src->info, glyph->src, &x0, &y0, &x1, &y1) == 0) {
+   if (codepoint && rstbtt_GetGlyphBox(&font->src->info, glyph->src, &x0, &y0, &x1, &y1) == 0) {
       return glyphNull;
    }
 
    scale = ((float)size) / font->fheight;
-
    bitmap =  rstbtt_GetGlyphBitmapSubpixel(&font->src->info, 0, scale, 0.0f, 0.0f, glyph->src, &w, &h, 0, 0);
-
    glyph->w = (float)w;
    glyph->h = (float)h;
+
+   if (codepoint) {
+	   glyph->x1 = (float)floor((float)x0 * scale);
+	   glyph->y1 = (float)floor((float)-y1 * scale);
+   } else glyph->y1 = (float)-((float)h * 0.75f);
 
    glyph->codepoint = codepoint;
    glyph->size = size;
    glyph->x = (i32)font->atlasX;
    glyph->x2 = (i32)(font->atlasX + glyph->w);
-   glyph->x1 = (float)floor((float)x0 * scale);
-   glyph->y1 = (float)floor((float)-y1 * scale);
    glyph->font = font;
 
    while (font->atlasX + glyph->w >= font->atlasWidth) {

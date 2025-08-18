@@ -10,7 +10,6 @@
 #define RGFW_C89
 #define RGFW_OPENGL
 #include "RGFW.h"
-
 #define RFONT_INT_DEFINED
 #include "RFont.h"
 
@@ -77,7 +76,7 @@ int main(int argc, char **argv) {
     english = RFont_font_init(&renderer, "DejaVuSans.ttf");
     japanese = RFont_font_init(&renderer, "DroidSansJapanese.ttf");
 
-    RFont_set_glyph_fallback_callback(glyphFallback);
+    /*RFont_set_glyph_fallback_callback(glyphFallback); */
 
     while (RGFW_window_shouldClose(win) == 0) {
 		RGFW_pollEvents();
@@ -101,8 +100,8 @@ int main(int argc, char **argv) {
         RGFW_window_swapBuffers_OpenGL(win);
     }
 
-    RFont_font_free(english);
-    RFont_font_free(japanese);
+    RFont_font_free(&renderer, english);
+    RFont_font_free(&renderer, japanese);
 
 	RFont_renderer_free(&renderer);
 
