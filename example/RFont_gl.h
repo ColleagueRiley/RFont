@@ -19,11 +19,17 @@ typedef struct RFont_GL_info{
 	float colors[RFONT_INIT_VERTS * 2];
 } RFont_GL_info;
 
-RFONT_API RFont_renderer RFont_gl_renderer(void);
+RFONT_API RFont_renderer_proc RFont_gl_renderer_proc(void);
+
+RFONT_API RFont_renderer* RFont_gl_renderer_init(void);
+RFONT_API void RFont_gl_renderer_initPtr(void* ptr, RFont_renderer* renderer);
 
 #endif
 
 #ifdef RFONT_IMPLEMENTATION
+
+RFont_renderer* RFont_gl_renderer_init(void) { return RFont_renderer_init(RFont_gl_renderer_proc()); }
+void RFont_gl_renderer_initPtr(void* ptr, RFont_renderer* renderer) { return RFont_renderer_initPtr(RFont_gl_renderer_proc(), ptr, renderer); }
 
 #ifndef __APPLE__
 #include <GL/gl.h>
@@ -169,7 +175,7 @@ void RFont_gl_renderer_set_color(void* ctx, float r, float g, float b, float a) 
    ((RFont_GL_info*)ctx)->color[3] = a;
 }
 
-void RFont_gl_renderer_initPtr(void* ctx) {
+void RFont_gl_renderer_internal_initPtr(void* ctx) {
 	static const char* defaultVShaderCode = RFONT_MULTILINE_STR(
 		\x23version 330 core       \n
 		layout (location = 0) in vec3 vertexPosition;
@@ -303,20 +309,19 @@ void RFont_gl_renderer_freePtr(void* ctx) {
 
 size_t RFont_gl_renderer_size(void) { return sizeof(RFont_GL_info); }
 
-RFont_renderer RFont_gl_renderer(void) {
-	RFont_renderer renderer;
+RFont_renderer_proc RFont_gl_renderer_proc(void) {
+	RFont_renderer_proc proc;
+	proc.initPtr = RFont_gl_renderer_internal_initPtr;
+	proc.create_atlas = RFont_gl_create_atlas;
+	proc.free_atlas = RFont_gl_free_atlas;
+	proc.bitmap_to_atlas = RFont_gl_bitmap_to_atlas;
+	proc.render = RFont_gl_renderer_text;
+	proc.set_color = RFont_gl_renderer_set_color;
+	proc.set_framebuffer = RFont_gl_renderer_set_framebuffer;
+	proc.freePtr = RFont_gl_renderer_freePtr;
+	proc.size = RFont_gl_renderer_size;
 
-	renderer.initPtr = RFont_gl_renderer_initPtr;
-	renderer.create_atlas = RFont_gl_create_atlas;
-	renderer.free_atlas = RFont_gl_free_atlas;
-	renderer.bitmap_to_atlas = RFont_gl_bitmap_to_atlas;
-	renderer.render = RFont_gl_renderer_text;
-	renderer.set_color = RFont_gl_renderer_set_color;
-	renderer.set_framebuffer = RFont_gl_renderer_set_framebuffer;
-	renderer.freePtr = RFont_gl_renderer_freePtr;
-	renderer.size = RFont_gl_renderer_size;
-
-	return renderer;
+	return proc;
 }
 
 RFont_mat4 RFont_ortho(float left, float right, float bottom, float top, float znear, float zfar) {

@@ -10,11 +10,17 @@ typedef struct RFont_GL1_info{
 	float color[4];
 } RFont_GL1_info;
 
-RFONT_API RFont_renderer RFont_gl1_renderer(void);
+RFONT_API RFont_renderer_proc RFont_gl1_renderer_proc(void);
+
+RFONT_API RFont_renderer* RFont_gl1_renderer_init(void);
+RFONT_API void RFont_gl1_renderer_initPtr(void* ptr, RFont_renderer* renderer);
 
 #endif
 
 #ifdef RFONT_IMPLEMENTATION
+
+RFont_renderer* RFont_gl1_renderer_init(void) { return RFont_renderer_init(RFont_gl1_renderer_proc()); }
+void RFont_gl1_renderer_initPtr(void* ptr, RFont_renderer* renderer) { return RFont_renderer_initPtr(RFont_gl1_renderer_proc(), ptr, renderer); }
 
 #ifndef __APPLE__
 #include <GL/gl.h>
@@ -198,23 +204,23 @@ void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float
 }
 
 void RFont_gl1_free_atlas(void* ctx, RFont_texture atlas) { glDeleteTextures(1, &atlas); RFONT_UNUSED(ctx); }
-void RFont_gl1_renderer_initPtr(void* ctx) { RFont_gl1_renderer_set_color(ctx, 0, 0, 0, 1); }
+void RFont_gl1_renderer_internal_initPtr(void* ctx) { RFont_gl1_renderer_set_color(ctx, 0, 0, 0, 1); }
 void RFont_gl1_renderer_freePtr(void* ctx) { RFONT_UNUSED(ctx);}
 size_t RFont_gl1_renderer_size(void) { return sizeof(RFont_GL1_info); }
 
-RFont_renderer RFont_gl1_renderer(void) {
-	RFont_renderer renderer;
+RFont_renderer_proc RFont_gl1_renderer_proc(void) {
+	RFont_renderer_proc proc;
 
-	renderer.initPtr = RFont_gl1_renderer_initPtr;
-	renderer.create_atlas = RFont_gl1_create_atlas;
-	renderer.free_atlas = RFont_gl1_free_atlas;
-	renderer.bitmap_to_atlas = RFont_gl1_bitmap_to_atlas;
-	renderer.render = RFont_gl1_renderer_text;
-	renderer.set_color = RFont_gl1_renderer_set_color;
-	renderer.set_framebuffer = RFont_gl1_renderer_set_framebuffer;
-	renderer.freePtr = RFont_gl1_renderer_freePtr;
-	renderer.size = RFont_gl1_renderer_size;
+	proc.initPtr = RFont_gl1_renderer_internal_initPtr;
+	proc.create_atlas = RFont_gl1_create_atlas;
+	proc.free_atlas = RFont_gl1_free_atlas;
+	proc.bitmap_to_atlas = RFont_gl1_bitmap_to_atlas;
+	proc.render = RFont_gl1_renderer_text;
+	proc.set_color = RFont_gl1_renderer_set_color;
+	proc.set_framebuffer = RFont_gl1_renderer_set_framebuffer;
+	proc.freePtr = RFont_gl1_renderer_freePtr;
+	proc.size = RFont_gl1_renderer_size;
 
-	return renderer;
+	return proc;
 }
 #endif /*  RFONT_IMPLEMENTATION  */

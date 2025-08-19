@@ -45,9 +45,10 @@ RFont_glyph glyphFallback(RFont_renderer* renderer, RFont_font* font, u32 codepo
 int main(int argc, char **argv) {
     RGFW_window* win;
 	i32 w, h;
+	RFont_renderer* renderer;
 
     #if !defined(RFONT_RENDER_LEGACY)
-		RFont_renderer renderer = RFont_gl_renderer();
+		RFont_renderer_proc renderer_proc = RFont_gl_renderer_proc();
 
 		RGFW_glHints* hints = RGFW_getGlobalHints_OpenGL();
 		hints->profile = RGFW_glCore;
@@ -55,7 +56,7 @@ int main(int argc, char **argv) {
 		hints->minor = 3;
 		RGFW_setGlobalHints_OpenGL(hints);
 	#else
-		RFont_renderer renderer = RFont_gl1_renderer();
+		RFont_renderer_proc renderer_proc = RFont_gl1_renderer_proc();
 	#endif
 
     win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 1000, 500, RGFW_windowCenter | RGFW_windowOpenGL);
@@ -63,18 +64,18 @@ int main(int argc, char **argv) {
 
     #if !defined(RFONT_RENDER_LEGACY)
     if (RGL_loadGL3((RGLloadfunc)RGFW_getProcAddress_OpenGL)) {
-		renderer = RFont_gl1_renderer();
+		renderer_proc = RFont_gl1_renderer_proc();
         printf("Failed to load OpenGL, defaulting to OpenGL 2\n");
     }
     #endif
 
-	RFont_renderer_init(&renderer);
+	renderer = RFont_renderer_init(renderer_proc);
 
     glClearColor(0.3f, 0.3f, 0.32f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-    english = RFont_font_init(&renderer, "DejaVuSans.ttf");
-    japanese = RFont_font_init(&renderer, "DroidSansJapanese.ttf");
+    english = RFont_font_init(renderer, "DejaVuSans.ttf");
+    japanese = RFont_font_init(renderer, "DroidSansJapanese.ttf");
 
     /*RFont_set_glyph_fallback_callback(glyphFallback); */
 
@@ -86,23 +87,23 @@ int main(int argc, char **argv) {
         glClear(GL_COLOR_BUFFER_BIT);
 
 		glViewport(0, 0, (size_t)w, (size_t)h);
-		RFont_renderer_set_framebuffer(&renderer, (u32)w, (u32)h);
+		RFont_renderer_set_framebuffer(renderer, (u32)w, (u32)h);
 
-		RFont_renderer_set_color(&renderer, 0.0f, 1.0f, 0, 1.0f);
-        RFont_draw_text(&renderer, english, "abcdefghijklmnopqrstuvwxyz\n1234567890@.<>,/?\\|[{]}", 0, 0, 60);
-        RFont_draw_text_spacing(&renderer, english, "`~!#$%^&*()_-=+", 0, 120, 60, 1.0f);
-        RFont_renderer_set_color(&renderer, 1.0f, 0.0f, 0, 1.0f);
-        RFont_draw_text(&renderer, english, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nSomething about a fast lazy 犬.", 0, 210, 20);
-        RFont_renderer_set_color(&renderer, 0.0f, 1.0f, 0, 1.0f);
-        RFont_draw_text(&renderer, english, "RFont_draw_text(); ⌫§", 0, 240, 60);
-        RFont_renderer_set_color(&renderer, 1.0f, 0.0f, 0, 1.0f);
-        RFont_draw_text(&renderer, japanese, "テキスト例hola", 0, 300, 60);
+		RFont_renderer_set_color(renderer, 0.0f, 1.0f, 0, 1.0f);
+        RFont_draw_text(renderer, english, "abcdefghijklmnopqrstuvwxyz\n1234567890@.<>,/?\\|[{]}", 0, 0, 60);
+        RFont_draw_text_spacing(renderer, english, "`~!#$%^&*()_-=+", 0, 120, 60, 1.0f);
+        RFont_renderer_set_color(renderer, 1.0f, 0.0f, 0, 1.0f);
+        RFont_draw_text(renderer, english, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nSomething about a fast lazy 犬.", 0, 210, 20);
+        RFont_renderer_set_color(renderer, 0.0f, 1.0f, 0, 1.0f);
+        RFont_draw_text(renderer, english, "RFont_draw_text(); ⌫§", 0, 240, 60);
+        RFont_renderer_set_color(renderer, 1.0f, 0.0f, 0, 1.0f);
+        RFont_draw_text(renderer, japanese, "テキスト例hola", 0, 300, 60);
         RGFW_window_swapBuffers_OpenGL(win);
     }
 
-    RFont_font_free(&renderer, english);
-    RFont_font_free(&renderer, japanese);
-	RFont_renderer_free(&renderer);
+    RFont_font_free(renderer, english);
+    RFont_font_free(renderer, japanese);
+	RFont_renderer_free(renderer);
     RGFW_window_close(win);
     return 0;
 }
