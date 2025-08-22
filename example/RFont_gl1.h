@@ -46,19 +46,19 @@ void RFont_gl1_renderer_initPtr(void* ptr, RFont_renderer* renderer) { RFont_ren
 
 #define RFONT_MULTILINE_STR(s) #s
 
-void RFont_gl1_renderer_set_framebuffer(void* ctx, u32 w, u32 h) {
-	((RFont_GL1_info*)ctx)->width = w;
-	((RFont_GL1_info*)ctx)->height = h;
+void RFont_gl1_renderer_set_framebuffer(RFont_GL1_info* ctx, u32 w, u32 h) {
+	ctx->width = w;
+	ctx->height = h;
 }
 
-void RFont_gl1_renderer_set_color(void* ctx, float r, float g, float b, float a) {
-	((RFont_GL1_info*)ctx)->color[0] = r;
-	((RFont_GL1_info*)ctx)->color[1] = g;
-	((RFont_GL1_info*)ctx)->color[2] = b;
-	((RFont_GL1_info*)ctx)->color[3] = a;
+void RFont_gl1_renderer_set_color(RFont_GL1_info* ctx, float r, float g, float b, float a) {
+	ctx->color[0] = r;
+	ctx->color[1] = g;
+	ctx->color[2] = b;
+	ctx->color[3] = a;
 }
 
-RFont_texture RFont_gl1_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight) {
+RFont_texture RFont_gl1_create_atlas(RFont_GL1_info* ctx, u32 atlasWidth, u32 atlasHeight) {
 	static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
 	u32 id = 0;
 
@@ -91,38 +91,6 @@ RFont_texture RFont_gl1_create_atlas(void* ctx, u32 atlasWidth, u32 atlasHeight)
 	return id;
 }
 
-b8 RFont_gl1_resize_atlas(void* ctx, RFont_texture* atlas, u32 newWidth, u32 newHeight) {
-	static GLint swizzleRgbaParams[4] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-	GLuint newAtlas;
-	RFONT_UNUSED(ctx);
-
-	glGenTextures(1, &newAtlas);
-	glBindTexture(GL_TEXTURE_2D, newAtlas);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (i32)newWidth, (i32)newHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-	glBindTexture(GL_TEXTURE_2D, *atlas);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, (i32)newWidth - RFONT_ATLAS_RESIZE_LEN, (i32)newHeight);
-
-	glDeleteTextures(1, (u32*)atlas);
-
-	glBindTexture(GL_TEXTURE_2D, newAtlas);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	/* swizzle new atlas */
-	glBindTexture(GL_TEXTURE_2D, newAtlas);
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleRgbaParams);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	*atlas = newAtlas;
-	return 1;
-}
 #ifndef GL_UNPACK_ROW_LENGTH
 #define GL_UNPACK_ROW_LENGTH 0x0CF2
 #define GL_UNPACK_SKIP_PIXELS 0x0CF4
@@ -138,9 +106,13 @@ void RFont_gl1_push_pixel_values(GLint alignment, GLint rowLength, GLint skipPix
 	glPixelStorei(GL_UNPACK_SKIP_ROWS, skipRows);
 }
 
-void RFont_gl1_bitmap_to_atlas(void* ctx, RFont_texture atlas, u8* bitmap, float x, float y, float w, float h) {
+void RFont_gl1_bitmap_to_atlas(RFont_GL1_info* ctx, RFont_texture atlas, u32 atlasWidth, u32 atlasHeight, u32 maxHeight, u8* bitmap, float w, float h, float* x, float* y) {
 	GLint alignment, rowLength, skipPixels, skipRows;
-	RFONT_UNUSED(ctx);
+	RFONT_UNUSED(ctx); RFONT_UNUSED(atlasHeight);
+	if ((*x + w) >= atlasWidth) {
+		*x = 0;
+		*y += (float)maxHeight;
+	}
 
 	glEnable(GL_TEXTURE_2D);
 
@@ -149,18 +121,19 @@ void RFont_gl1_bitmap_to_atlas(void* ctx, RFont_texture atlas, u8* bitmap, float
 	glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &skipPixels);
 	glGetIntegerv(GL_UNPACK_SKIP_ROWS, &skipRows);
 
-	glBindTexture(GL_TEXTURE_2D, atlas);
+	glBindTexture(GL_TEXTURE_2D, (u32)atlas);
 
 	RFont_gl1_push_pixel_values(1, (i32)w, 0, 0);
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, (i32)x, (i32)y, (i32)w, (i32)h, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, (i32)(*x), (i32)*y, (i32)w, (i32)h, GL_RGBA, GL_UNSIGNED_BYTE, bitmap);
 
 	RFont_gl1_push_pixel_values(alignment, rowLength, skipPixels, skipRows);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
+	*x += w;
 }
 
-void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float* tcoords, size_t nverts) {
+void RFont_gl1_renderer_text(RFont_GL1_info* ctx, RFont_texture atlas, float* verts, float* tcoords, size_t nverts) {
 	size_t i;
 	size_t tIndex = 0;
 
@@ -177,17 +150,17 @@ void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 
-	glBindTexture(GL_TEXTURE_2D, atlas);
+	glBindTexture(GL_TEXTURE_2D, (u32)atlas);
 
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0, ((RFont_GL1_info*)ctx)->width, ((RFont_GL1_info*)ctx)->height, 0, -1.0, 1.0);
+	glOrtho(0, ctx->width, ctx->height, 0, -1.0, 1.0);
 
 	glBegin(GL_TRIANGLES);
-	glColor4f(((RFont_GL1_info*)ctx)->color[0],
-		   ((RFont_GL1_info*)ctx)->color[1],
-		   ((RFont_GL1_info*)ctx)->color[2],
-		   ((RFont_GL1_info*)ctx)->color[3]
+	glColor4f(ctx->color[0],
+		   ctx->color[1],
+		   ctx->color[2],
+		   ctx->color[3]
 		   );
 
 	for (i = 0; i < (nverts * 3); i += 3) {
@@ -203,23 +176,22 @@ void RFont_gl1_renderer_text(void* ctx, RFont_texture atlas, float* verts, float
 	glEnable(GL_DEPTH_TEST);
 }
 
-void RFont_gl1_free_atlas(void* ctx, RFont_texture atlas) { glDeleteTextures(1, &atlas); RFONT_UNUSED(ctx); }
-void RFont_gl1_renderer_internal_initPtr(void* ctx) { RFont_gl1_renderer_set_color(ctx, 0, 0, 0, 1); }
-void RFont_gl1_renderer_freePtr(void* ctx) { RFONT_UNUSED(ctx);}
+void RFont_gl1_free_atlas(RFont_GL1_info* ctx, RFont_texture atlas) { glDeleteTextures(1, (u32*)&atlas); RFONT_UNUSED(ctx); }
+void RFont_gl1_renderer_internal_initPtr(RFont_GL1_info* ctx) { RFont_gl1_renderer_set_color(ctx, 0, 0, 0, 1); }
+void RFont_gl1_renderer_freePtr(RFont_GL1_info* ctx) { RFONT_UNUSED(ctx);}
 size_t RFont_gl1_renderer_size(void) { return sizeof(RFont_GL1_info); }
 
 RFont_renderer_proc RFont_gl1_renderer_proc(void) {
 	RFont_renderer_proc proc;
-
-	proc.initPtr = RFont_gl1_renderer_internal_initPtr;
-	proc.create_atlas = RFont_gl1_create_atlas;
-	proc.free_atlas = RFont_gl1_free_atlas;
-	proc.bitmap_to_atlas = RFont_gl1_bitmap_to_atlas;
-	proc.render = RFont_gl1_renderer_text;
-	proc.set_color = RFont_gl1_renderer_set_color;
-	proc.set_framebuffer = RFont_gl1_renderer_set_framebuffer;
-	proc.freePtr = RFont_gl1_renderer_freePtr;
-	proc.size = RFont_gl1_renderer_size;
+	proc.initPtr = (void(*)(void*))RFont_gl1_renderer_internal_initPtr;
+	proc.create_atlas = (RFont_texture (*)(void*, u32, u32))RFont_gl1_create_atlas;
+	proc.free_atlas = (void (*)(void*, RFont_texture))RFont_gl1_free_atlas;
+	proc.bitmap_to_atlas = (void(*)(void*, RFont_texture, u32, u32, u32, u8*, float, float, float*, float*))RFont_gl1_bitmap_to_atlas;
+	proc.render = (void (*)(void*, RFont_texture, float*, float*, size_t))RFont_gl1_renderer_text;
+	proc.set_color = (void (*)(void*, float, float, float, float))RFont_gl1_renderer_set_color;
+	proc.set_framebuffer = (void (*)(void*, u32, u32))RFont_gl1_renderer_set_framebuffer;
+	proc.freePtr = (void (*)(void*))RFont_gl1_renderer_freePtr;
+	proc.size = (size_t (*)(void))RFont_gl1_renderer_size;
 
 	return proc;
 }
