@@ -29,7 +29,7 @@ RFONT_API void RFont_gl_renderer_initPtr(void* ptr, RFont_renderer* renderer);
 #ifdef RFONT_IMPLEMENTATION
 
 RFont_renderer* RFont_gl_renderer_init(void) { return RFont_renderer_init(RFont_gl_renderer_proc()); }
-void RFont_gl_renderer_initPtr(void* ptr, RFont_renderer* renderer) { return RFont_renderer_initPtr(RFont_gl_renderer_proc(), ptr, renderer); }
+void RFont_gl_renderer_initPtr(void* ptr, RFont_renderer* renderer) { RFont_renderer_initPtr(RFont_gl_renderer_proc(), ptr, renderer); }
 
 #ifndef __APPLE__
 #include <GL/gl.h>

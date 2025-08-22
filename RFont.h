@@ -260,10 +260,6 @@ RFONT_API void RFont_renderer_freePtr(RFont_renderer* renderer);
 
 #define RFONT_GET_FONT_WIDTH(fontHeight) RFONT_MAX_GLYPHS * fontHeight
 
-#ifndef RFont_area
-typedef struct { u32 w, h; } RFont_area;
-#endif
-
 typedef struct {
    u32 codepoint; /* the character (for checking) */
    size_t size; /* the size of the glyph */
@@ -428,9 +424,10 @@ RFONT_API void RFont_font_add_string_len(RFont_renderer* renderer, RFont_font* f
  * @param font The font stucture to use for drawing
  * @param text The string to draw
  * @param size The size of the text
- * @return The area of the text based on the size
+ * @param [OUTPUT] the output width
+ * @param [OUTPUT] the output height
 */
-RFONT_API RFont_area RFont_text_area(RFont_renderer* renderer, RFont_font* font, const char* text, u32 size);
+RFONT_API void RFont_text_area(RFont_renderer* renderer, RFont_font* font, const char* text, u32 size, u32* w, u32* h);
 
 /**
  * @brief Get the area of the text based on the size using the font, using a given length.
@@ -438,9 +435,10 @@ RFONT_API RFont_area RFont_text_area(RFont_renderer* renderer, RFont_font* font,
  * @param text The string to draw
  * @param size The size of the text
  * @param spacing The spacing of the text
- * @return The area of the text based on the size
+ * @param [OUTPUT] the output width
+ * @param [OUTPUT] the output height
 */
-RFONT_API RFont_area RFont_text_area_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float spacing, u32 size);
+RFONT_API void RFont_text_area_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float spacing, u32 size, u32* w, u32* h);
 
 /**
  * @brief Get the area of the text based on the size using the font, using a given length.
@@ -450,9 +448,10 @@ RFONT_API RFont_area RFont_text_area_spacing(RFont_renderer* renderer, RFont_fon
  * @param size The size of the text
  * @param stopNL the number of \n s until it stops (0 = don't stop until the end)
  * @param spacing The spacing of the text
- * @return The area of the text based on the size
+ * @param [OUTPUT] the output width
+ * @param [OUTPUT] the output height
 */
-RFONT_API RFont_area RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing);
+RFONT_API void RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing, u32* w, u32* h);
 
 /**
  * @brief Draw a text string using the font.
@@ -461,9 +460,8 @@ RFONT_API RFont_area RFont_text_area_len(RFont_renderer* renderer, RFont_font* f
  * @param x The x position of the text
  * @param y The y position of the text
  * @param size The size of the text
- * @return The area of the text based on the size
 */
-RFONT_API RFont_area RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size);
+RFONT_API void RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size);
 
 /**
  * @brief Draw a text string using the font and a given spacing.
@@ -473,9 +471,8 @@ RFONT_API RFont_area RFont_draw_text(RFont_renderer* renderer, RFont_font* font,
  * @param y The y position of the text
  * @param size The size of the text
  * @param spacing The spacing of the text
- * @return The area of the text based on the size
 */
-RFONT_API RFont_area RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing);
+RFONT_API void RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing);
 
 /**
  * @brief Draw a text string using the font using a given length and a given spacing.
@@ -486,9 +483,8 @@ RFONT_API RFont_area RFont_draw_text_spacing(RFont_renderer* renderer, RFont_fon
  * @param y The y position of the text
  * @param size The size of the text
  * @param spacing The spacing of the text
- * @return The area of the text based on the size
 */
-RFONT_API RFont_area RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing);
+RFONT_API void RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing);
 
 #endif /* RFONT_H */
 
@@ -846,15 +842,15 @@ RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* fo
    return *glyph;
 }
 
-RFont_area RFont_text_area(RFont_renderer* renderer, RFont_font* font, const char* text, u32 size) {
-   return RFont_text_area_len(renderer, font, text, 0, size, 0, 0.0f);
+void RFont_text_area(RFont_renderer* renderer, RFont_font* font, const char* text, u32 size, u32* w, u32* h) {
+   RFont_text_area_len(renderer, font, text, 0, size, 0, 0.0f, w, h);
 }
 
-RFont_area RFont_text_area_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float spacing, u32 size) {
-   return RFont_text_area_len(renderer, font, text, 0, size, 0, spacing);
+void RFont_text_area_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float spacing, u32 size, u32* w, u32* h) {
+   RFont_text_area_len(renderer, font, text, 0, size, 0, spacing, w, h);
 }
 
-RFont_area RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing) {
+void RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, u32 size, size_t stopNL, float spacing, u32* w, u32* h) {
    float x = 0;
    size_t y = 1;
 
@@ -867,10 +863,10 @@ RFont_area RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const
    for (str = (char*)text; (len == 0 || (size_t)(str - text) < len) && *str; str++) {
       if (*str == '\n') {
          if (y == stopNL) {
-            RFont_area area;
-            area.w = (u32)x; area.h = (u32)y * size;
-            return area;
-         }
+            if (w) *w = (u32)x;
+			if (h) *h = (u32)y * size;
+			return;
+		 }
 
          y++;
          x = 0;
@@ -890,20 +886,16 @@ RFont_area RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const
       x += (float)glyph.advance + spacing;
    }
 
-    {
-        RFont_area area;
-        area.w = (u32)x;
-        area.h = (u32)(y * size);
-        return area;
-    }
+	if (w) *w = (u32)x;
+	if(h) *h = (u32)(y * size);
 }
 
-RFont_area RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size) {
-   return RFont_draw_text_len(renderer, font, text, 0, x, y, size, 0.0f);
+void RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size) {
+   RFont_draw_text_len(renderer, font, text, 0, x, y, size, 0.0f);
 }
 
-RFont_area RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing) {
-   return RFont_draw_text_len(renderer, font, text, 0, x, y, size, spacing);
+void RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing) {
+   RFont_draw_text_len(renderer, font, text, 0, x, y, size, spacing);
 }
 
 char* RFont_codepoint_to_utf8(u32 codepoint) {
@@ -933,7 +925,7 @@ char* RFont_codepoint_to_utf8(u32 codepoint) {
    return utf8;
 }
 
-RFont_area RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
+void RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
    float* verts = font->verts;
    float* tcoords = font->tcoords;
 
@@ -951,6 +943,8 @@ RFont_area RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const
    float space_adv = (scale * font->space_adv) / 2;
 
    float descent_offset =  (-font->descent * scale);
+
+   RGFW_UNUSED(startY);
 
    y = (y + (float)size - descent_offset);
 
@@ -1035,12 +1029,6 @@ RFont_area RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const
 
 	if (i && renderer->proc.render)
       renderer->proc.render(renderer->ctx, font->atlas, verts, tcoords, i / 3);
-    {
-       RFont_area area;
-       area.w = (u32)(x - startX);
-       area.h = (u32)(y - startY) + (u32)(-font->descent * scale);
-       return area;
-    }
 }
 
 /*
