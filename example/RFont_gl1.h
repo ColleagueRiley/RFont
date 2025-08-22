@@ -125,7 +125,7 @@ void RFont_gl1_bitmap_to_atlas(RFont_GL1_info* ctx, RFont_texture atlas, u32 atl
 
 	RFont_gl1_push_pixel_values(1, (i32)w, 0, 0);
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, (i32)(*x), (i32)*y, (i32)w, (i32)h, GL_RGBA, GL_UNSIGNED_BYTE, bitmap);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, (i32)(*x), (i32)*y, (i32)w, (i32)h, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
 	RFont_gl1_push_pixel_values(alignment, rowLength, skipPixels, skipRows);
 
