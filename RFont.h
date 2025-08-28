@@ -758,7 +758,7 @@ RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* fo
 	if (glyph->src == 0 && codepoint) return RFont_font_add_codepoint_ex(renderer, font, 0, size, fallback);
 	font->glyph_len++;
 
-	if (codepoint && rstbtt_GetGlyphBox(&font->src->info, glyph->src, &x0, &y0, &x1, &y1) == 0 && codepoint != ' ') {
+	if (codepoint && rstbtt_GetGlyphBox(&font->src->info, glyph->src, &x0, &y0, &x1, &y1) == 0) {
 		return glyphNull;
 	}
 
