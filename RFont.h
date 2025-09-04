@@ -421,8 +421,9 @@ RFONT_API void RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, c
  * @param x The x position of the text
  * @param y The y position of the text
  * @param size The size of the text
+ * @return the number of verts rendered
 */
-RFONT_API void RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size);
+RFONT_API size_t RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size);
 
 /**
  * @brief Draw a text string using the font and a given spacing.
@@ -432,8 +433,9 @@ RFONT_API void RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const
  * @param y The y position of the text
  * @param size The size of the text
  * @param spacing The spacing of the text
+ * @return the number of verts rendered
 */
-RFONT_API void RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing);
+RFONT_API size_t RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing);
 
 /**
  * @brief Draw a text string using the font using a given length and a given spacing.
@@ -444,9 +446,9 @@ RFONT_API void RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* fon
  * @param y The y position of the text
  * @param size The size of the text
  * @param spacing The spacing of the text
+ * @return the number of verts rendered
 */
-RFONT_API void RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing);
-
+RFONT_API size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing);
 #endif /* RFONT_H */
 
 #ifdef RFONT_IMPLEMENTATION
@@ -842,12 +844,12 @@ void RFont_text_area_len(RFont_renderer* renderer, RFont_font* font, const char*
 	if(h) *h = (u32)(y * size);
 }
 
-void RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size) {
-   RFont_draw_text_len(renderer, font, text, 0, x, y, size, 0.0f);
+size_t RFont_draw_text(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size) {
+   return RFont_draw_text_len(renderer, font, text, 0, x, y, size, 0.0f);
 }
 
-void RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing) {
-   RFont_draw_text_len(renderer, font, text, 0, x, y, size, spacing);
+size_t RFont_draw_text_spacing(RFont_renderer* renderer, RFont_font* font, const char* text, float x, float y, u32 size, float spacing) {
+   return RFont_draw_text_len(renderer, font, text, 0, x, y, size, spacing);
 }
 
 char* RFont_codepoint_to_utf8(u32 codepoint) {
@@ -877,7 +879,7 @@ char* RFont_codepoint_to_utf8(u32 codepoint) {
    return utf8;
 }
 
-void RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
+size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
    float* verts = font->verts;
    float* tcoords = font->tcoords;
 
@@ -981,6 +983,8 @@ void RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char*
 
 	if (i && renderer->proc.render)
       renderer->proc.render(renderer->ctx, font->atlas, verts, tcoords, i / 3);
+
+	return (i / 3);
 }
 
 /*
