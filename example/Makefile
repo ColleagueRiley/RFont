@@ -7,10 +7,12 @@ EXT = .exe
 WARNINGS = -Werror -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wold-style-definition -Wconversion -Wsign-conversion -Wshadow -Wpointer-arith -Wvla -Wcast-align -Wstrict-overflow -Wnested-externs -Wstrict-aliasing -Wredundant-decls -Winit-self -Wmissing-noreturn
 
 FLAGS = $(WARNINGS) -std=c89
+OBJ = o
 
 ifeq ($(CC),cl)
 	WARNINGS =
-	FLAGS =  
+	FLAGS = 
+	OBJ = obj 
 endif
 
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc))
@@ -40,10 +42,13 @@ endif
 
 all: gl gl3
 
-gl: ../RFont.h RFont_gl1.h main.c
-	$(CC) -g3 $(FLAGS) main.c $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall  -o gl$(EXT)
-gl3: ../RFont.h  RFont_gl.h main.c 
-	$(CC) -g3 $(FLAGS) main.c $(LIBS) -I./ext -I../ -Wall -o gl3$(EXT)
+RGFW.$(OBJ): ./ext/RGFW.h ./ext/RGFW.c
+	$(CC) -c ext/RGFW.c
+
+gl: ../RFont.h RFont_gl1.h main.c RGFW.$(OBJ)
+	$(CC) -g3 $(FLAGS) main.c RGFW.$(OBJ) $(LIBS) -I./ext -I../ -D RFONT_RENDER_LEGACY -Wall  -o gl$(EXT)
+gl3: ../RFont.h  RFont_gl.h main.c RGFW.$(OBJ)
+	$(CC) -g3 $(FLAGS) main.c RGFW.$(OBJ) $(LIBS) -I./ext -I../ -Wall -o gl3$(EXT)
 
 clean:
 	rm gl3$(EXT) gl$(EXT) gl3.exe.so gl.exe.so *.o -f
