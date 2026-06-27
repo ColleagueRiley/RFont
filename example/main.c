@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
 		hints->minor = 3;
 		RGFW_setGlobalHints_OpenGL(hints);
 	#else
+        RGFW_UNUSED(hints);
 		renderer_proc = RFont_gl1_renderer_proc();
 	#endif
 
