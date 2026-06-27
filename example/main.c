@@ -1,4 +1,13 @@
+#ifdef _MSC_VER
+	#pragma comment(lib, "opengl32")
+#endif
+
 #define RFONT_IMPLEMENTATION
+
+#define RGFW_IMPLEMENTATION 
+#define RGFW_C89
+#define RGFW_OPENGL
+#include "RGFW.h"
 
 #define RFONT_C89
 #ifndef RFONT_RENDER_LEGACY
@@ -6,10 +15,6 @@
 #include "ext/rglLoad.h"
 #endif
 
-#define RGFWDEF
-#define RGFW_C89
-#define RGFW_OPENGL
-#include "RGFW.h"
 #define RFONT_INT_DEFINED
 #include "RFont.h"
 
@@ -43,6 +48,8 @@ RFont_glyph glyphFallback(RFont_renderer* renderer, RFont_font* font, u32 codepo
 }
 
 int main(int argc, char **argv) {
+    RGFW_init("RFont example", RGFW_initOpenGL);
+
     RGFW_window* win;
 	i32 w, h;
 	RFont_renderer* renderer;
@@ -60,7 +67,7 @@ int main(int argc, char **argv) {
 	#endif
 
     win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 1000, 500, RGFW_windowCenter | RGFW_windowOpenGL);
-	RGFW_window_setExitKey(win, RGFW_escape);
+	RGFW_window_setExitKey(win, RGFW_keyEscape);
 
     #if !defined(RFONT_RENDER_LEGACY)
     if (RGL_loadGL3((RGLloadfunc)RGFW_getProcAddress_OpenGL)) {
@@ -105,5 +112,7 @@ int main(int argc, char **argv) {
     RFont_font_free(renderer, japanese);
 	RFont_renderer_free(renderer);
     RGFW_window_close(win);
+
+    RGFW_deinit();
     return 0;
 }
