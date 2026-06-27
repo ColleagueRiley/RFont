@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
     glClearColor(0.3f, 0.3f, 0.32f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-    english = RFont_font_init(renderer, "DejaVuSans.ttf", 59, 500, 500);
+    english = RFont_font_init(renderer, "DejaVuSans.ttf", 60, 500, 500);
     japanese = RFont_font_init(renderer, "DroidSansJapanese.ttf", 60, 500, 500);
 
     /*RFont_set_glyph_fallback_callback(glyphFallback); */
