@@ -497,6 +497,7 @@ RFont_renderer* RFont_renderer_init(RFont_renderer_proc proc) {
 }
 
 void RFont_renderer_initPtr(RFont_renderer_proc proc, void* ptr, RFont_renderer* renderer) {
+	RFONT_ASSERT(renderer);
 	renderer->ctx = ptr;
 	renderer->proc = proc;
 	if (renderer->proc.initPtr)
@@ -504,21 +505,25 @@ void RFont_renderer_initPtr(RFont_renderer_proc proc, void* ptr, RFont_renderer*
 }
 
 void RFont_renderer_set_framebuffer(RFont_renderer* renderer, u32 w, u32 h) {
+	RFONT_ASSERT(renderer);
 	if (renderer->proc.set_framebuffer)
 		renderer->proc.set_framebuffer(renderer->ctx, w, h);
 }
 
 void RFont_renderer_set_surface(RFont_renderer* renderer, RFont_surface surface) {
+	RFONT_ASSERT(renderer);
 	if (renderer->proc.set_surface)
 		renderer->proc.set_surface(renderer, surface);
 }
 
 void RFont_renderer_set_color(RFont_renderer* renderer, float r, float g, float b, float a) {
+	RFONT_ASSERT(renderer);
 	if (renderer->proc.set_color)
 		renderer->proc.set_color(renderer->ctx, r, g, b, a);
 }
 
 void RFont_renderer_free(RFont_renderer* renderer) {
+	RFONT_ASSERT(renderer);
 	RFont_renderer_freePtr(renderer);
 	if (renderer->ctx) RFONT_FREE(renderer->ctx);
 	RFONT_FREE(renderer);
@@ -612,7 +617,7 @@ char* RFont_read_file(const char* font_name) {
     FILE* ttf_file = fopen(font_name, "rb");
     if (ttf_file == NULL) return NULL;
 
-    fseek(ttf_file, 0U, SEEK_END);
+	fseek(ttf_file, 0U, SEEK_END);
     size = (size_t)ftell(ttf_file);
     if (size <= 0) return NULL;
 
@@ -626,16 +631,20 @@ char* RFont_read_file(const char* font_name) {
 }
 
 RFont_font* RFont_font_init(RFont_renderer* renderer, const char* font_name, u32 maxHeight, size_t atlasWidth, size_t atlasHeight) {
-    char* ttf_buffer = RFont_read_file(font_name);
-    RFont_font* font = RFont_font_init_data(renderer, (u8*)ttf_buffer, maxHeight, atlasWidth, atlasHeight);
+    RFont_font* font;
+	char* ttf_buffer = RFont_read_file(font_name);
+	if (ttf_buffer == NULL) return NULL;
+
+    font = RFont_font_init_data(renderer, (u8*)ttf_buffer, maxHeight, atlasWidth, atlasHeight);
     return font;
 }
 
 RFont_font* RFont_font_init_ptr(RFont_renderer* renderer, const char* font_name, u32 maxHeight, size_t atlasWidth, size_t atlasHeight, RFont_font* ptr) {
-    char* ttf_buffer = RFont_read_file(font_name);
+    RFont_font* font;
+	char* ttf_buffer = RFont_read_file(font_name);
 	if (ttf_buffer == NULL) return NULL;
 
-    RFont_font* font = RFont_font_init_data_ptr(renderer, (u8*)ttf_buffer, maxHeight, atlasWidth, atlasHeight, ptr);
+    font = RFont_font_init_data_ptr(renderer, (u8*)ttf_buffer, maxHeight, atlasWidth, atlasHeight, ptr);
     return font;
 }
 #endif
@@ -646,13 +655,15 @@ RFont_font* RFont_font_init_data(RFont_renderer* renderer, u8* font_data, u32 ma
 }
 
 RFont_font* RFont_font_init_data_ptr(RFont_renderer* renderer, u8* font_data, u32 maxHeight, size_t atlasWidth, size_t atlasHeight, RFont_font* font) {
-	RFONT_ASSERT(renderer);
-	RFONT_ASSERT(font_data);
-	RFONT_ASSERT(font);
 	u16 index = 0;
 	u16 vert_index = 0;
 
 	i32 space_codepoint = 0;
+
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font_data);
+	RFONT_ASSERT(font);
+
 	font->src = (RFont_src*)RFONT_MALLOC(sizeof(RFont_src));
 	font->atlasWidth = atlasWidth;
 	font->atlasHeight = atlasHeight;
@@ -750,12 +761,13 @@ void RFont_font_add_string(RFont_renderer* renderer, RFont_font* font, const cha
 }
 
 void RFont_font_add_string_len(RFont_renderer* renderer, RFont_font* font, const char* string, size_t strLen, size_t* sizes, size_t sizeLen) {
+   u32 i;
+   char* str;
+
    RFONT_ASSERT(renderer);
    RFONT_ASSERT(font);
    RFONT_ASSERT(string);
 
-   u32 i;
-   char* str;
    for (str = (char*)string; (!strLen || (size_t)(str - string) < strLen) && *str; str++)
       for (i = 0; i < sizeLen; i++)
          RFont_font_add_char(renderer, font, *str, sizes[i]);
@@ -785,9 +797,6 @@ RFont_glyph RFont_font_add_codepoint(RFont_renderer* renderer, RFont_font* font,
 }
 
 RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* font, u32 codepoint, size_t size, b8 fallback) {
-	RFONT_ASSERT(renderer);
-	RFONT_ASSERT(font);
-
 	RFont_glyph* glyph;
 	RFont_glyph glyphNull;
 
@@ -796,6 +805,10 @@ RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* fo
 
 	i32 x0, y0, x1, y1, w = 0, h = 0, advanceX = 0;
 	u32 i;
+
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font);
+
 	for (i = 0; i < font->glyph_len; i++)
 		if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == size)
 			return font->glyphs[i];
@@ -941,10 +954,6 @@ char* RFont_codepoint_to_utf8(u32 codepoint) {
 }
 
 size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
-	RFONT_ASSERT(renderer);
-	RFONT_ASSERT(font);
-	RFONT_ASSERT(text);
-
 	RFont_render_data data;
 	float startX = x;
 	float startY = y;
@@ -955,11 +964,15 @@ size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const cha
 	char* str;
 	RFont_glyph glyph;
 	float realX, realY;
+	float scale, space_adv, descent_offset;
 
-	float scale = (((float)size) / font->fheight);
-	float space_adv = (scale * font->space_adv);
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font);
+	RFONT_ASSERT(text);
 
-	float descent_offset =  (-font->descent * scale);
+	scale = (((float)size) / font->fheight);
+	space_adv = (scale * font->space_adv);
+	descent_offset =  (-font->descent * scale);
 
 	data.verts = font->verts;
 	data.tcoords = font->tcoords;
@@ -967,6 +980,8 @@ size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const cha
 	data.atlas = font->atlas;
 	data.nverts = 0;
 	data.nelements = 0;
+
+
 
 	RFONT_UNUSED(startY);
 
