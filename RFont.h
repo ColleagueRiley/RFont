@@ -610,7 +610,6 @@ char* RFont_read_file(const char* font_name) {
     size_t size, out;
     char* ttf_buffer;
     FILE* ttf_file = fopen(font_name, "rb");
-
     if (ttf_file == NULL) return NULL;
 
     fseek(ttf_file, 0U, SEEK_END);
@@ -634,6 +633,8 @@ RFont_font* RFont_font_init(RFont_renderer* renderer, const char* font_name, u32
 
 RFont_font* RFont_font_init_ptr(RFont_renderer* renderer, const char* font_name, u32 maxHeight, size_t atlasWidth, size_t atlasHeight, RFont_font* ptr) {
     char* ttf_buffer = RFont_read_file(font_name);
+	if (ttf_buffer == NULL) return NULL;
+
     RFont_font* font = RFont_font_init_data_ptr(renderer, (u8*)ttf_buffer, maxHeight, atlasWidth, atlasHeight, ptr);
     return font;
 }
@@ -645,6 +646,9 @@ RFont_font* RFont_font_init_data(RFont_renderer* renderer, u8* font_data, u32 ma
 }
 
 RFont_font* RFont_font_init_data_ptr(RFont_renderer* renderer, u8* font_data, u32 maxHeight, size_t atlasWidth, size_t atlasHeight, RFont_font* font) {
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font_data);
+	RFONT_ASSERT(font);
 	u16 index = 0;
 	u16 vert_index = 0;
 
@@ -746,6 +750,10 @@ void RFont_font_add_string(RFont_renderer* renderer, RFont_font* font, const cha
 }
 
 void RFont_font_add_string_len(RFont_renderer* renderer, RFont_font* font, const char* string, size_t strLen, size_t* sizes, size_t sizeLen) {
+   RFONT_ASSERT(renderer);
+   RFONT_ASSERT(font);
+   RFONT_ASSERT(string);
+
    u32 i;
    char* str;
    for (str = (char*)string; (!strLen || (size_t)(str - string) < strLen) && *str; str++)
@@ -777,6 +785,9 @@ RFont_glyph RFont_font_add_codepoint(RFont_renderer* renderer, RFont_font* font,
 }
 
 RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* font, u32 codepoint, size_t size, b8 fallback) {
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font);
+
 	RFont_glyph* glyph;
 	RFont_glyph glyphNull;
 
@@ -930,6 +941,10 @@ char* RFont_codepoint_to_utf8(u32 codepoint) {
 }
 
 size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const char* text, size_t len, float x, float y, u32 size, float spacing) {
+	RFONT_ASSERT(renderer);
+	RFONT_ASSERT(font);
+	RFONT_ASSERT(text);
+
 	RFont_render_data data;
 	float startX = x;
 	float startY = y;
