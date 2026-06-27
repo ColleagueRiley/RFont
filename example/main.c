@@ -49,22 +49,24 @@ RFont_glyph glyphFallback(RFont_renderer* renderer, RFont_font* font, u32 codepo
 }
 
 int main(int argc, char **argv) {
-    RGFW_init("RFont example", RGFW_initOpenGL);
-
     RGFW_window* win;
 	i32 w, h;
 	RFont_renderer* renderer;
+    RFont_renderer_proc renderer_proc;
+    RGFW_glHints* hints; 
+
+    RGFW_init("RFont example", RGFW_initOpenGL);
 
     #if !defined(RFONT_RENDER_LEGACY)
-		RFont_renderer_proc renderer_proc = RFont_gl_renderer_proc();
+		renderer_proc = RFont_gl_renderer_proc();
 
-		RGFW_glHints* hints = RGFW_getGlobalHints_OpenGL();
+		hints = RGFW_getGlobalHints_OpenGL();
 		hints->profile = RGFW_glCore;
 		hints->major = 3;
 		hints->minor = 3;
 		RGFW_setGlobalHints_OpenGL(hints);
 	#else
-		RFont_renderer_proc renderer_proc = RFont_gl1_renderer_proc();
+		renderer_proc = RFont_gl1_renderer_proc();
 	#endif
 
     win = RGFW_createWindow((argc > 1) ? argv[1] : "window", 200, 200, 1000, 500, RGFW_windowCenter | RGFW_windowOpenGL);
