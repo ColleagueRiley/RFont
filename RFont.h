@@ -81,19 +81,18 @@ int main () {
 }
 */
 
-#ifndef RFONT_INLINE
-    #ifdef RFONT_C89
-        #define RFONT_INLINE
-    #else
-        #define RFONT_INLINE inline
-    #endif
-#endif
-
 #ifndef RFONT_API
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-        #define RFONT_API extern RFONT_INLINE
+      #ifndef RFONT_INLINE
+         #ifdef RFONT_C89
+            #define RFONT_INLINE
+         #else
+            #define RFONT_INLINE inline
+         #endif
+      #endif
+      #define RFONT_API extern RFONT_INLINE
     #endif
 #endif
 
