@@ -81,18 +81,19 @@ int main () {
 }
 */
 
+#ifndef RFONT_INLINE
+    #ifdef RFONT_C89
+        #define RFONT_INLINE
+    #else
+        #define RFONT_INLINE inline
+    #endif
+#endif
+
 #ifndef RFONT_API
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-         #ifndef RFONT_INLINE
-            #ifdef RFONT_C89
-               #define RFONT_INLINE
-            #else
-               #define RFONT_INLINE inline
-            #endif
-         #endif
-         #define RFONT_API extern RFONT_INLINE
+        #define RFONT_API extern RFONT_INLINE
     #endif
 #endif
 
@@ -729,7 +730,7 @@ void RFont_font_data_free(RFont_renderer* renderer, RFont_font* font) {
 
 void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font) {
    RFONT_FREE(font->src->info.data);
-   RFont_font_free_data_ptr(renderer, font);
+   RFont_font_free_data_ptr(renderer, font)
 }
 
 void RFont_font_free(RFont_renderer* renderer, RFont_font* font) {
