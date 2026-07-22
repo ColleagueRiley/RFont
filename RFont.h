@@ -85,14 +85,14 @@ int main () {
     #ifdef RFONT_STATIC
         #define RFONT_API static
     #else
-      #ifndef RFONT_INLINE
-         #ifdef RFONT_C89
-            #define RFONT_INLINE
-         #else
-            #define RFONT_INLINE inline
+         #ifndef RFONT_INLINE
+            #ifdef RFONT_C89
+               #define RFONT_INLINE
+            #else
+               #define RFONT_INLINE inline
+            #endif
          #endif
-      #endif
-      #define RFONT_API extern RFONT_INLINE
+         #define RFONT_API extern RFONT_INLINE
     #endif
 #endif
 
@@ -343,9 +343,21 @@ RFONT_API void RFont_font_free(RFont_renderer* renderer, RFont_font* font);
 
 /**
  * @brief Free data from the font stucture only (not including the stucture)
- * @param font The strucutre with the font data  to free
+ * @param font The strucutre with the font data to free
 */
 RFONT_API void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font);
+
+/**
+ * @brief Free data from the font stucture only, based on user owned data does not free the structure or user owned data)
+ * @param font The strucutre with the font data to free
+*/
+RFONT_API void RFont_font_free_data_ptr(RFont_renderer* renderer, RFont_font* font);
+
+/**
+ * @brief Free data from the font, based on user owned data (does not free the user owned data)
+ * @param font The strucutre with the font data to free
+*/
+RFONT_API void RFont_font_data_free(RFont_renderer* renderer, RFont_font* font);
 
 typedef RFont_glyph (*RFont_glyph_fallback_callback)(RFont_renderer* renderer, RFont_font* font, u32 codepoint, size_t size);
 RFont_glyph_fallback_callback RFont_set_glyph_fallback_callback(RFont_glyph_fallback_callback callback);
@@ -611,22 +623,24 @@ you probably care about this part
 
 #ifndef RFONT_NO_STDIO
 char* RFont_read_file(const char* font_name) {
-    size_t size, out;
-    char* ttf_buffer;
-    FILE* ttf_file = fopen(font_name, "rb");
-    if (ttf_file == NULL) return NULL;
+   size_t size, out;
+   char *ttf_buffer;
+   FILE *ttf_file = fopen(font_name, "rb");
+   if (ttf_file == NULL)
+      return NULL;
 
-	fseek(ttf_file, 0U, SEEK_END);
-    size = (size_t)ftell(ttf_file);
-    if (size <= 0) return NULL;
+   fseek(ttf_file, 0U, SEEK_END);
+   size = (size_t)ftell(ttf_file);
+   if (size <= 0)
+      return NULL;
 
-    ttf_buffer = (char*)RFONT_MALLOC(sizeof(char) * (size_t)size);
-    fseek(ttf_file, 0U, SEEK_SET);
+   ttf_buffer = (char *)RFONT_MALLOC(sizeof(char) * (size_t)size);
+   fseek(ttf_file, 0U, SEEK_SET);
 
-    out = fread(ttf_buffer, 1, (size_t)size, ttf_file);
-    RFONT_UNUSED(out);
+   out = fread(ttf_buffer, 1, (size_t)size, ttf_file);
+   RFONT_UNUSED(out);
 
-    return ttf_buffer;
+   return ttf_buffer;
 }
 
 RFont_font* RFont_font_init(RFont_renderer* renderer, const char* font_name, u32 maxHeight, size_t atlasWidth, size_t atlasHeight) {
@@ -702,16 +716,25 @@ RFont_font* RFont_font_init_data_ptr(RFont_renderer* renderer, u8* font_data, u3
 	return font;
 }
 
-void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font) {
+void RFont_font_free_data_ptr(RFont_renderer* renderer, RFont_font* font) {
 	if (renderer->proc.free_atlas)
 		renderer->proc.free_atlas(renderer->ctx, font->atlas);
 	RFONT_FREE(font->src);
 }
 
+void RFont_font_data_free(RFont_renderer* renderer, RFont_font* font) {
+   RFont_font_free_data_ptr(renderer, font);
+   RFONT_FREE(font);
+}
+
+void RFont_font_free_ptr(RFont_renderer* renderer, RFont_font* font) {
+   RFONT_FREE(font->src->info.data);
+   RFont_font_free_data_ptr(renderer, font);
+}
+
 void RFont_font_free(RFont_renderer* renderer, RFont_font* font) {
-    RFONT_FREE(font->src->info.data);
-    RFont_font_free_ptr(renderer, font);
-    RFONT_FREE(font);
+   RFont_font_free_ptr(renderer, font);
+   RFONT_FREE(font);
 }
 
 /*
