@@ -1057,7 +1057,7 @@ size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const cha
 
 		/* texture coords */
 		data.tcoords[tIndex] = RFONT_GET_TEXPOSX(glyph.x, font->atlasWidth);
-		data.tcoords[tIndex + 1] = RFONT_GET_TEXPOSY(glyph.y, font->atlasWidth);
+		data.tcoords[tIndex + 1] = RFONT_GET_TEXPOSY(glyph.y, font->atlasHeight);
 
 		/*  */
 		data.tcoords[tIndex + 2] = RFONT_GET_TEXPOSX(glyph.x, font->atlasWidth);
@@ -1068,7 +1068,7 @@ size_t RFont_draw_text_len(RFont_renderer* renderer, RFont_font* font, const cha
 		/*  */
 		/*  */
 		data.tcoords[tIndex + 6] = RFONT_GET_TEXPOSX(glyph.x2, font->atlasWidth);
-		data.tcoords[tIndex + 7] = RFONT_GET_TEXPOSY(glyph.y, font->atlasWidth);
+		data.tcoords[tIndex + 7] = RFONT_GET_TEXPOSY(glyph.y, font->atlasHeight);
 
 		x += glyph.advance + spacing;
 
