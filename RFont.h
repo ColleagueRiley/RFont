@@ -836,7 +836,7 @@ RFont_glyph RFont_font_add_codepoint_ex(RFont_renderer* renderer, RFont_font* fo
 			return font->glyphs[i];
 
 	RFONT_MEMSET(&glyphNull, 0, sizeof(glyphNull));
-	if (i < sizeof(font->glyphs)) {
+	if (i < (sizeof(font->glyphs) / sizeof(RFont_glyph))) {
 		glyph = &font->glyphs[i];
 	} else {
 		return glyphNull;
